@@ -2,6 +2,11 @@
 
 PWA mobile-first para registrar treinos de academia, séries, repetições e cargas, com acompanhamento visual de volume, evolução de desempenho e recordes pessoais ao longo das semanas e meses.
 
+## Autores
+
+- [MarceloSilva2005](https://github.com/MarceloSilva2005)
+- [Felipe1dev](https://github.com/Felipe1dev)
+
 ## Executar localmente
 
 ```bash
