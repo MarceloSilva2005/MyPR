@@ -1,6 +1,6 @@
 # MyPR
 
-PWA mobile-first para registro de treinos, acompanhamento de volume, evolução de carga e recordes pessoais.
+PWA mobile-first para registrar treinos de academia, séries, repetições e cargas, com acompanhamento visual de volume, evolução de desempenho e recordes pessoais ao longo das semanas e meses.
 
 ## Executar localmente
 
