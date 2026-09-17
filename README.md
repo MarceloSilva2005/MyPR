@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MyPR
 
-## Getting Started
+PWA mobile-first para registro de treinos, acompanhamento de volume, evolução de carga e recordes pessoais.
 
-First, run the development server:
+## Executar localmente
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abra `http://localhost:3000`. O aplicativo funciona sem conta e persiste os dados no IndexedDB do navegador.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Na primeira abertura, o MyPR cria um pequeno histórico de demonstração para que gráficos e comparações possam ser explorados imediatamente. Ele pode ser restaurado pelo Perfil.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Conta e sincronização
 
-## Learn More
+1. Crie um projeto no Supabase.
+2. Execute `supabase/schema.sql` no SQL Editor.
+3. Ative Google e/ou Magic Link em Authentication.
+4. Copie `.env.example` para `.env.local` e preencha as duas variáveis.
+5. Cadastre a URL local e o domínio de produção entre os Redirect URLs permitidos.
 
-To learn more about Next.js, take a look at the following resources:
+Sem essas variáveis, o modo local continua funcional e a interface informa que o backup em nuvem ainda não está configurado.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Verificação
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run typecheck
+npm run test
+npm run lint
+npm run build
+```
 
-## Deploy on Vercel
+## Deploy
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+O projeto está pronto para importação na Vercel. Configure as mesmas variáveis do Supabase no ambiente de produção antes de publicar.
