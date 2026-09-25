@@ -5,6 +5,7 @@ import {
   isWithinInterval,
   startOfMonth,
   startOfWeek,
+  subDays,
   subMonths,
   subWeeks,
 } from "date-fns";
@@ -19,6 +20,16 @@ import type {
   WorkoutExercise,
   WorkoutSummary,
 } from "@/lib/domain";
+
+export function parseWorkoutDate(date: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Date(year, (month ?? 1) - 1, day ?? 1, 12, 0, 0);
+}
+
+export function isWorkoutInMonth(date: string, reference = new Date()) {
+  const workoutDate = parseWorkoutDate(date);
+  return workoutDate.getFullYear() === reference.getFullYear() && workoutDate.getMonth() === reference.getMonth();
+}
 
 export function estimatedOneRepMax(loadKg: number, reps: number) {
   if (loadKg <= 0 || reps <= 0) return 0;
@@ -122,6 +133,52 @@ export function comparisonPeriods(summaries: WorkoutSummary[], now = new Date())
 export function percentChange(current: number, previous: number) {
   if (previous === 0) return current === 0 ? 0 : 100;
   return ((current - previous) / previous) * 100;
+}
+
+export function currentWorkoutStreak(summaries: Pick<Workout, "performedAt" | "status" | "deletedAt">[]) {
+  const workoutDates = new Set(
+    summaries
+      .filter((workout) => workout.status === "completed" && !workout.deletedAt)
+      .map((workout) => workout.performedAt),
+  );
+
+  if (workoutDates.size === 0) return 0;
+
+  const today = new Date();
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const yesterday = subDays(start, 1);
+
+  const candidateDays = [start, yesterday];
+  for (const day of candidateDays) {
+    const key = format(day, "yyyy-MM-dd");
+    if (!workoutDates.has(key)) continue;
+
+    let streak = 1;
+    let previousDay = subDays(day, 1);
+    while (workoutDates.has(format(previousDay, "yyyy-MM-dd"))) {
+      streak += 1;
+      previousDay = subDays(previousDay, 1);
+    }
+    return streak;
+  }
+
+  const latestWorkout = [...workoutDates].sort((a, b) => b.localeCompare(a))[0];
+  if (!latestWorkout) return 0;
+
+  const latestDate = new Date(`${latestWorkout}T12:00:00`);
+  const sameDay = format(start, "yyyy-MM-dd") === latestWorkout;
+  const previousDayMatch = format(yesterday, "yyyy-MM-dd") === latestWorkout;
+  if (sameDay || previousDayMatch) {
+    let currentStreak = 1;
+    let current = subDays(latestDate, 1);
+    while (workoutDates.has(format(current, "yyyy-MM-dd"))) {
+      currentStreak += 1;
+      current = subDays(current, 1);
+    }
+    return currentStreak;
+  }
+
+  return 0;
 }
 
 export function exerciseTrend(

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarDays, ChevronRight, Copy, Dumbbell, Filter, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { WorkoutSummary } from "@/lib/domain";
+import { currentWorkoutStreak, isWorkoutInMonth, parseWorkoutDate } from "@/lib/analytics";
 import { EmptyState } from "@/components/mypr/empty-state";
 
 export function WorkoutsView({
@@ -27,15 +28,21 @@ export function WorkoutsView({
     const now = new Date();
     return summaries.filter((workout) => {
       if (filter === "draft") return workout.status !== "completed";
-      if (filter === "month") {
-        const date = parseISO(workout.performedAt);
-        return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-      }
+      if (filter === "month") return isWorkoutInMonth(workout.performedAt, now);
       return true;
     });
   }, [filter, summaries]);
 
   const trainedDays = new Set(summaries.filter((workout) => workout.status === "completed").map((workout) => workout.performedAt));
+  const streak = useMemo(() => currentWorkoutStreak(summaries), [summaries]);
+  const monthVolume = useMemo(() => {
+    const now = new Date();
+    return summaries
+      .filter((workout) => workout.status === "completed")
+      .filter((workout) => isWorkoutInMonth(workout.performedAt, now))
+      .reduce((sum, workout) => sum + workout.volumeKg, 0);
+  }, [summaries]);
+  const bestVolume = useMemo(() => Math.max(0, ...summaries.filter((workout) => workout.status === "completed").map((workout) => workout.volumeKg)), [summaries]);
   const calendarDays = Array.from({ length: 35 }, (_, index) => {
     const now = new Date();
     const first = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -52,6 +59,30 @@ export function WorkoutsView({
         </div>
         <Button onClick={onStartWorkout}><Plus /> <span className="hidden sm:inline">Novo treino</span></Button>
       </header>
+
+      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-3">
+        <Card className="border-border/70 bg-card/70 shadow-none">
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Sequência</p>
+            <p className="mt-3 text-2xl font-bold text-primary">{streak}d</p>
+            <p className="mt-1 text-xs text-muted-foreground">dias treinos seguidos</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border/70 bg-card/70 shadow-none">
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Volume</p>
+            <p className="mt-3 text-2xl font-bold">{monthVolume.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} kg</p>
+            <p className="mt-1 text-xs text-muted-foreground">este mês</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border/70 bg-card/70 shadow-none">
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Melhor dia</p>
+            <p className="mt-3 text-2xl font-bold">{bestVolume.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} kg</p>
+            <p className="mt-1 text-xs text-muted-foreground">maior volume em um treino</p>
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid gap-5 lg:grid-cols-[.8fr_1.4fr]">
         <Card className="h-fit border-border/70 bg-card/70 shadow-none">
@@ -102,7 +133,7 @@ export function WorkoutsView({
                       <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-secondary text-muted-foreground"><Dumbbell className="size-4.5" /></span>
                       <span className="min-w-0 flex-1">
                         <span className="flex items-center gap-2">
-                          <span className="font-medium">{format(parseISO(workout.performedAt), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}</span>
+                          <span className="font-medium">{format(parseWorkoutDate(workout.performedAt), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}</span>
                           {workout.status !== "completed" ? <Badge variant="secondary">Rascunho</Badge> : null}
                         </span>
                         <span className="mt-0.5 block truncate text-xs text-muted-foreground">

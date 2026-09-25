@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
 import { Activity, CloudOff, Dumbbell, Home, LoaderCircle, UserRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,9 @@ import { ProfileView } from "@/components/mypr/profile-view";
 import { WorkoutEditor } from "@/components/mypr/workout-editor";
 import { WorkoutDetails } from "@/components/mypr/workout-details";
 import { PwaRegister } from "@/components/mypr/pwa-register";
+import { UserSetup } from "@/components/mypr/user-setup";
 import { useMyPrData } from "@/hooks/use-mypr-data";
+import { db, getStoredActiveProfileId, setStoredActiveProfileId } from "@/lib/db";
 import { cn } from "@/lib/utils";
 
 type View = "home" | "workouts" | "analytics" | "profile";
@@ -28,10 +31,43 @@ const navigation = [
 
 export function AppShell() {
   const data = useMyPrData();
+  const profiles = useLiveQuery(() => db.profiles.toArray(), []);
+  const [activeProfileId, setActiveProfileIdState] = useState<string | null>(null);
   const [view, setView] = useState<View>("home");
   const [editor, setEditor] = useState<EditorState>({ open: false });
   const [detailsId, setDetailsId] = useState<string>();
+  const [quickAddExercise, setQuickAddExercise] = useState(false);
   const activeLabel = navigation.find((item) => item.id === view)?.label;
+  const hasHistory = Boolean(data && data.summaries.some((workout) => workout.status === "completed"));
+
+  useEffect(() => {
+    setActiveProfileIdState(getStoredActiveProfileId());
+  }, []);
+
+  useEffect(() => {
+    if (!profiles || profiles.length === 0) {
+      if (activeProfileId) {
+        setStoredActiveProfileId(null);
+      }
+      return;
+    }
+
+    const selectedExists = activeProfileId && profiles.some((profile) => profile.id === activeProfileId);
+    if (!selectedExists) {
+      const fallback = profiles[0];
+      setActiveProfileIdState(fallback.id);
+      setStoredActiveProfileId(fallback.id);
+    } else {
+      setStoredActiveProfileId(activeProfileId);
+    }
+  }, [activeProfileId, profiles]);
+
+  const activeProfile = profiles?.find((profile) => profile.id === activeProfileId) ?? profiles?.[0] ?? null;
+
+  useEffect(() => {
+    if (!activeProfile) return;
+    document.documentElement.classList.toggle("dark", activeProfile.theme === "dark");
+  }, [activeProfile]);
 
   const openEditor = (state?: Omit<EditorState, "open">) => {
     setDetailsId(undefined);
@@ -47,10 +83,27 @@ export function AppShell() {
       return <AnalyticsView exercises={data.exercises} workouts={data.workouts} workoutExercises={data.workoutExercises} sets={data.sets} summaries={data.summaries} records={data.records} />;
     }
     if (view === "profile") {
-      return <ProfileView exercises={data.exercises} pendingSync={data.pendingSync} />;
+      return <ProfileView exercises={data.exercises} pendingSync={data.pendingSync} quickAdd={quickAddExercise} onQuickAddConsumed={() => setQuickAddExercise(false)} />;
     }
-    return <HomeView summaries={data.summaries} records={data.records} onStartWorkout={() => openEditor()} onOpenWorkout={setDetailsId} onViewHistory={() => setView("workouts")} />;
-  }, [data, view]);
+    const lastCompletedWorkout = [...data.summaries]
+      .filter((workout) => workout.status === "completed")
+      .sort((a, b) => b.performedAt.localeCompare(a.performedAt))[0];
+    const quickStart = lastCompletedWorkout ? () => openEditor({ workoutId: lastCompletedWorkout.id, repeat: true }) : () => openEditor();
+
+    return <HomeView summaries={data.summaries} records={data.records} onStartWorkout={() => openEditor()} onOpenWorkout={setDetailsId} onViewHistory={() => setView("workouts")} onRepeatLastWorkout={lastCompletedWorkout ? () => openEditor({ workoutId: lastCompletedWorkout.id, repeat: true }) : undefined} onViewProfile={() => { setQuickAddExercise(true); setView("profile"); }} onQuickStart={quickStart} />;
+  }, [data, quickAddExercise, view]);
+
+  if (!data || !profiles) {
+    return (
+      <div className="grid min-h-dvh place-items-center text-center">
+        <div><LoaderCircle className="mx-auto size-7 animate-spin text-primary" /><p className="mt-3 text-sm text-muted-foreground">Preparando seu histórico…</p></div>
+      </div>
+    );
+  }
+
+  if (!activeProfile) {
+    return <UserSetup onComplete={(profile) => setActiveProfileIdState(profile.id)} />;
+  }
 
   return (
     <div className="min-h-dvh bg-background text-foreground">
@@ -70,29 +123,31 @@ export function AppShell() {
               );
             })}
           </nav>
-          <div className="mt-auto rounded-2xl border border-border/70 bg-card/55 p-4">
-            <div className="flex items-center gap-2 text-sm font-medium"><CloudOff className="size-4 text-primary" /> Offline-first</div>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Registre agora. Sincronize quando estiver conectado.</p>
-            {data ? <Badge variant="secondary" className="mt-3">{data.pendingSync} alterações locais</Badge> : null}
-          </div>
+          {hasHistory ? (
+            <div className="mt-auto rounded-2xl border border-border/70 bg-card/55 p-4">
+              <div className="flex items-center gap-2 text-sm font-medium"><CloudOff className="size-4 text-primary" /> Offline-first</div>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Registre agora. Sincronize quando estiver conectado.</p>
+              {data ? <Badge variant="secondary" className="mt-3">{data.pendingSync} alterações locais</Badge> : null}
+            </div>
+          ) : null}
         </aside>
 
         <div className="min-w-0 flex-1">
           <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border/60 bg-background/88 px-4 backdrop-blur-xl lg:px-8">
             <div className="lg:hidden"><Brand compact /></div>
-            <p className="hidden text-sm font-medium text-muted-foreground lg:block">{activeLabel}</p>
+            <p className="hidden text-sm font-medium text-muted-foreground lg:block">{hasHistory ? activeLabel : ""}</p>
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="border-emerald-400/20 bg-emerald-400/8 text-emerald-300"><span className="mr-1.5 size-1.5 rounded-full bg-emerald-400" />Dados salvos</Badge>
-              <Button variant="ghost" size="icon" className="hidden rounded-full sm:inline-flex" onClick={() => setView("profile")} aria-label="Abrir perfil"><UserRound /></Button>
+              {hasHistory ? (
+                <Badge variant="outline" className="border-emerald-400/20 bg-emerald-400/8 text-emerald-300"><span className="mr-1.5 size-1.5 rounded-full bg-emerald-400" />Dados salvos</Badge>
+              ) : null}
+              {hasHistory ? (
+                <Button variant="ghost" size="icon" className="hidden rounded-full sm:inline-flex" onClick={() => setView("profile")} aria-label="Abrir perfil"><UserRound /></Button>
+              ) : null}
             </div>
           </header>
 
           <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-            {data ? content : (
-              <div className="grid min-h-[60dvh] place-items-center text-center">
-                <div><LoaderCircle className="mx-auto size-7 animate-spin text-primary" /><p className="mt-3 text-sm text-muted-foreground">Preparando seu histórico…</p></div>
-              </div>
-            )}
+            {content}
           </main>
         </div>
       </div>
@@ -113,7 +168,7 @@ export function AppShell() {
 
       {data ? (
         <>
-          <WorkoutEditor open={editor.open} source={{ workoutId: editor.workoutId, repeat: editor.repeat }} exercises={data.exercises} onOpenChange={(open) => setEditor((current) => ({ ...current, open }))} />
+          <WorkoutEditor open={editor.open} source={{ workoutId: editor.workoutId, repeat: editor.repeat }} exercises={data.exercises} templates={data.templates} onOpenChange={(open) => setEditor((current) => ({ ...current, open }))} />
           <WorkoutDetails workoutId={detailsId} exercises={data.exercises} onClose={() => setDetailsId(undefined)} onEdit={(workoutId) => openEditor({ workoutId })} onRepeat={(workoutId) => openEditor({ workoutId, repeat: true })} />
         </>
       ) : null}

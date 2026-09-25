@@ -6,6 +6,8 @@ export interface Profile {
   id: string;
   name: string;
   email?: string;
+  age?: number;
+  weightKg?: number;
   weightUnit: WeightUnit;
   theme: "dark" | "light";
   createdAt: string;
@@ -69,6 +71,28 @@ export interface WorkoutBundle {
   sets: SetEntry[];
 }
 
+export interface WorkoutTemplateSet {
+  id: string;
+  reps: number;
+  loadKg: number;
+  completed: boolean;
+}
+
+export interface WorkoutTemplateExercise {
+  id: string;
+  exerciseId: string;
+  name: string;
+  sets: WorkoutTemplateSet[];
+}
+
+export interface WorkoutTemplate {
+  id: string;
+  name: string;
+  items: WorkoutTemplateExercise[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface WorkoutSummary extends Workout {
   exerciseCount: number;
   setCount: number;
@@ -107,8 +131,8 @@ export interface WorkoutDraftExercise {
   name: string;
   sets: Array<{
     id: string;
-    reps: number;
-    loadKg: number;
+    reps: number | null;
+    loadKg: number | null;
     completed: boolean;
   }>;
 }
