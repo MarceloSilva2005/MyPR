@@ -20,12 +20,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import type { Exercise, WorkoutBundle, WorkoutDraftExercise } from "@/lib/domain";
-import { saveExercise, saveWorkoutBundle, workoutBundle } from "@/lib/db";
+import type { Exercise, WorkoutBundle, WorkoutDraftExercise, WorkoutTemplate } from "@/lib/domain";
+import { saveExercise, saveWorkoutBundle, saveWorkoutTemplate, workoutBundle } from "@/lib/db";
+import { createWorkoutTemplate } from "@/lib/workout-templates";
 
 type EditorSource = { workoutId?: string; repeat?: boolean };
 
-function newSet(loadKg = 0, reps = 10, completed = false) {
+function newSet(loadKg: number | null = null, reps: number | null = null, completed = false) {
   return { id: crypto.randomUUID(), loadKg, reps, completed };
 }
 
@@ -33,14 +34,17 @@ export function WorkoutEditor({
   open,
   source,
   exercises,
+  templates,
   onOpenChange,
 }: {
   open: boolean;
   source: EditorSource;
   exercises: Exercise[];
+  templates: WorkoutTemplate[];
   onOpenChange: (open: boolean) => void;
 }) {
   const [workoutId, setWorkoutId] = useState("");
+  const [createdAt, setCreatedAt] = useState("");
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [items, setItems] = useState<WorkoutDraftExercise[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -81,11 +85,13 @@ export function WorkoutEditor({
                 })),
             }));
           setWorkoutId(source.repeat ? crypto.randomUUID() : bundle.workout.id);
+          setCreatedAt(source.repeat ? new Date().toISOString() : bundle.workout.createdAt);
           setDate(source.repeat ? format(new Date(), "yyyy-MM-dd") : bundle.workout.performedAt);
           setItems(nextItems);
         }
       } else if (!cancelled) {
         setWorkoutId(crypto.randomUUID());
+        setCreatedAt(new Date().toISOString());
         setDate(format(new Date(), "yyyy-MM-dd"));
         setItems([]);
       }
@@ -105,7 +111,7 @@ export function WorkoutEditor({
           id: workoutId,
           performedAt: date,
           status,
-          createdAt: now,
+          createdAt: createdAt || now,
           updatedAt: now,
         },
         exercises: items.map((item, index) => ({
@@ -121,8 +127,8 @@ export function WorkoutEditor({
             id: set.id,
             workoutExerciseId: item.id,
             order: index,
-            reps: Math.max(0, Number(set.reps) || 0),
-            loadKg: Math.max(0, Number(set.loadKg) || 0),
+            reps: Math.max(0, Number(set.reps ?? 0)),
+            loadKg: Math.max(0, Number(set.loadKg ?? 0)),
             completed: set.completed,
             createdAt: now,
             updatedAt: now,
@@ -130,7 +136,7 @@ export function WorkoutEditor({
         ),
       };
     },
-    [date, items, workoutId],
+    [createdAt, date, items, workoutId],
   );
 
   useEffect(() => {
@@ -166,13 +172,58 @@ export function WorkoutEditor({
     toast.success("Exercício criado");
   }
 
-  function updateSet(itemId: string, setId: string, changes: Partial<WorkoutDraftExercise["sets"][number]>) {
+  function applyTemplate(template: WorkoutTemplate) {
+    setItems(
+      template.items.map((item) => ({
+        id: crypto.randomUUID(),
+        exerciseId: item.exerciseId,
+        name: item.name,
+        sets: item.sets.map((set) => ({ id: crypto.randomUUID(), reps: set.reps, loadKg: set.loadKg, completed: false })),
+      })),
+    );
+    setPickerOpen(false);
+    setSearch("");
+  }
+
+  async function saveCurrentTemplate() {
+    if (items.length === 0) {
+      toast.error("Adicione pelo menos um exercício antes de salvar o modelo.");
+      return;
+    }
+    const template = createWorkoutTemplate(`Treino ${format(new Date(), "dd/MM")}`, items);
+    const saved = await saveWorkoutTemplate(template);
+    toast.success("Modelo salvo", { description: saved.name });
+    setPickerOpen(false);
+  }
+
+  function updateSetValue(itemId: string, setId: string, field: "loadKg" | "reps", rawValue: string) {
     setItems((current) =>
-      current.map((item) =>
-        item.id === itemId
-          ? { ...item, sets: item.sets.map((set) => (set.id === setId ? { ...set, ...changes } : set)) }
-          : item,
-      ),
+      current.map((item) => {
+        if (item.id !== itemId) return item;
+        return {
+          ...item,
+          sets: item.sets.map((set) => {
+            if (set.id !== setId) return set;
+            const parsed = rawValue === "" ? null : Number(rawValue);
+            return {
+              ...set,
+              [field]: Number.isFinite(parsed) ? parsed : null,
+            };
+          }),
+        };
+      }),
+    );
+  }
+
+  function updateSetCompletion(itemId: string, setId: string, completed: boolean) {
+    setItems((current) =>
+      current.map((item) => {
+        if (item.id !== itemId) return item;
+        return {
+          ...item,
+          sets: item.sets.map((set) => (set.id === setId ? { ...set, completed } : set)),
+        };
+      }),
     );
   }
 
@@ -206,10 +257,15 @@ export function WorkoutEditor({
       return;
     }
     setSaving(true);
-    await saveWorkoutBundle(buildBundle("completed"));
-    setSaving(false);
-    toast.success("Treino concluído", { description: "Seu histórico e recordes foram atualizados." });
-    onOpenChange(false);
+    try {
+      await saveWorkoutBundle(buildBundle("completed"));
+      toast.success("Treino concluído", { description: "Seu histórico e recordes foram atualizados." });
+      onOpenChange(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível salvar o treino.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -254,14 +310,14 @@ export function WorkoutEditor({
                       {item.sets.map((set, setIndex) => (
                         <div key={set.id} className={`grid grid-cols-[36px_1fr_1fr_34px_34px] items-center gap-2 rounded-xl p-1 transition ${set.completed ? "bg-emerald-400/8" : "bg-secondary/35"}`}>
                           <span className="text-center font-mono text-sm text-muted-foreground">{setIndex + 1}</span>
-                          <Input aria-label={`Carga da série ${setIndex + 1}`} inputMode="decimal" type="number" min="0" step="0.5" value={set.loadKg} onChange={(event) => updateSet(item.id, set.id, { loadKg: Number(event.target.value) })} className="h-10 bg-background/60 px-2" />
-                          <Input aria-label={`Repetições da série ${setIndex + 1}`} inputMode="numeric" type="number" min="0" value={set.reps} onChange={(event) => updateSet(item.id, set.id, { reps: Number(event.target.value) })} className="h-10 bg-background/60 px-2" />
-                          <Checkbox aria-label={`Marcar série ${setIndex + 1} como concluída`} checked={set.completed} onCheckedChange={(checked) => updateSet(item.id, set.id, { completed: checked === true })} className="size-6 rounded-lg data-[state=checked]:border-emerald-400 data-[state=checked]:bg-emerald-400" />
+                          <Input aria-label={`Carga da série ${setIndex + 1}`} inputMode="decimal" type="number" min="0" step="0.5" value={set.loadKg ?? ""} onChange={(event) => updateSetValue(item.id, set.id, "loadKg", event.target.value)} className="h-10 bg-background/60 px-2" placeholder="0" />
+                          <Input aria-label={`Repetições da série ${setIndex + 1}`} inputMode="numeric" type="number" min="0" value={set.reps ?? ""} onChange={(event) => updateSetValue(item.id, set.id, "reps", event.target.value)} className="h-10 bg-background/60 px-2" placeholder="10" />
+                          <Checkbox aria-label={`Marcar série ${setIndex + 1} como concluída`} checked={set.completed} onCheckedChange={(checked) => updateSetCompletion(item.id, set.id, checked === true)} className="size-6 rounded-lg data-[state=checked]:border-emerald-400 data-[state=checked]:bg-emerald-400" />
                           <Button variant="ghost" size="icon-sm" aria-label={`Duplicar série ${setIndex + 1}`} onClick={() => duplicateSet(item.id, set.id)}><Copy /></Button>
                         </div>
                       ))}
                     </div>
-                    <Button variant="ghost" size="sm" className="mt-2 w-full text-primary" onClick={() => setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, sets: [...entry.sets, newSet(entry.sets.at(-1)?.loadKg, entry.sets.at(-1)?.reps)] } : entry))}>
+                    <Button variant="ghost" size="sm" className="mt-2 w-full text-primary" onClick={() => setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, sets: [...entry.sets, newSet(entry.sets.at(-1)?.loadKg ?? null, entry.sets.at(-1)?.reps ?? null)] } : entry))}>
                       <Plus /> Adicionar série
                     </Button>
                   </div>
@@ -280,12 +336,35 @@ export function WorkoutEditor({
                   </div>
                   <div className="mt-3 max-h-52 space-y-1 overflow-y-auto">
                     {filteredExercises.map((exercise) => (
-                      <button key={exercise.id} type="button" onClick={() => addExercise(exercise)} className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                      <button key={exercise.id} type="button" onClick={() => addExercise(exercise)} className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left transition hover:bg-primary/10 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                         <span><span className="block text-sm font-medium">{exercise.name}</span><span className="block text-xs text-muted-foreground">{exercise.muscleGroup ?? "Sem grupo"}</span></span>
-                        <Plus className="size-4 text-primary" />
+                        <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/8 px-2 py-1 text-[11px] font-medium text-primary">Adicionar</span>
                       </button>
                     ))}
                   </div>
+
+                  <div className="mt-4 border-t border-border/70 pt-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Modelos salvos</p>
+                      <Button variant="secondary" size="sm" onClick={saveCurrentTemplate}>Salvar modelo</Button>
+                    </div>
+                    {templates.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Nenhum modelo salvo ainda.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {templates.map((template) => (
+                          <button key={template.id} type="button" onClick={() => applyTemplate(template)} className="flex w-full items-center justify-between rounded-xl border border-border/70 bg-background/60 px-3 py-2 text-left hover:border-primary/40 hover:bg-primary/5">
+                            <span>
+                              <span className="block text-sm font-medium">{template.name}</span>
+                              <span className="block text-xs text-muted-foreground">{template.items.length} exercícios</span>
+                            </span>
+                            <span className="text-xs text-primary">Usar</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   <div className="mt-4 border-t border-border/70 pt-4">
                     <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Cadastrar novo</p>
                     <div className="grid gap-2 sm:grid-cols-[1fr_.7fr_auto]">
@@ -296,9 +375,16 @@ export function WorkoutEditor({
                   </div>
                 </section>
               ) : (
-                <Button variant="outline" className="h-12 w-full border-dashed border-primary/45 text-primary hover:bg-primary/8" onClick={() => setPickerOpen(true)}>
-                  <Plus /> Adicionar exercício
-                </Button>
+                <div className="space-y-3">
+                  <Button variant="outline" className="h-12 w-full border-dashed border-primary/45 text-primary hover:bg-primary/8" onClick={() => setPickerOpen(true)}>
+                    <Plus /> Adicionar exercício
+                  </Button>
+                  {templates.length > 0 ? (
+                    <Button variant="secondary" className="h-10 w-full" onClick={() => setPickerOpen(true)}>
+                      Usar modelo salvo
+                    </Button>
+                  ) : null}
+                </div>
               )}
 
               {items.length === 0 ? (

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
 import type { User } from "@supabase/supabase-js";
 import {
   Archive,
@@ -27,13 +28,24 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { Exercise } from "@/lib/domain";
-import { archiveExercise, exportLocalData, resetLocalData, saveExercise } from "@/lib/db";
+import { archiveExercise, exportLocalData, getStoredActiveProfileId, listProfiles, resetLocalData, restoreLocalData, saveExercise, saveProfile } from "@/lib/db";
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase";
 import { syncNow } from "@/lib/sync-service";
 
-export function ProfileView({ exercises, pendingSync }: { exercises: Exercise[]; pendingSync: number }) {
+export function ProfileView({
+  exercises,
+  pendingSync,
+  quickAdd = false,
+  onQuickAddConsumed,
+}: {
+  exercises: Exercise[];
+  pendingSync: number;
+  quickAdd?: boolean;
+  onQuickAddConsumed?: () => void;
+}) {
   const [dark, setDark] = useState(true);
   const [search, setSearch] = useState("");
+  const [selectedGroup, setSelectedGroup] = useState<string>("Todos");
   const [exerciseDialog, setExerciseDialog] = useState(false);
   const [name, setName] = useState("");
   const [group, setGroup] = useState("");
@@ -42,7 +54,31 @@ export function ProfileView({ exercises, pendingSync }: { exercises: Exercise[];
   const [user, setUser] = useState<User | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [online, setOnline] = useState(true);
+  const [importing, setImporting] = useState(false);
+  const [profileDialog, setProfileDialog] = useState(false);
+  const [profileName, setProfileName] = useState("");
+  const [profileEmail, setProfileEmail] = useState("");
+  const [profileAge, setProfileAge] = useState("");
+  const [profileWeight, setProfileWeight] = useState("");
+  const importInputRef = useRef<HTMLInputElement | null>(null);
   const configured = isSupabaseConfigured();
+  const profiles = useLiveQuery(() => listProfiles(), []);
+  const localProfile = profiles?.find((profile) => profile.id === getStoredActiveProfileId()) ?? profiles?.[0] ?? null;
+
+  useEffect(() => {
+    if (!localProfile) return;
+    const isDark = localProfile.theme === "dark";
+    setDark(isDark);
+    document.documentElement.classList.toggle("dark", isDark);
+  }, [localProfile]);
+
+  useEffect(() => {
+    if (!profileDialog) return;
+    setProfileName(localProfile?.name ?? "");
+    setProfileEmail(localProfile?.email ?? "");
+    setProfileAge(localProfile?.age != null ? String(localProfile.age) : "");
+    setProfileWeight(localProfile?.weightKg != null ? String(localProfile.weightKg) : "");
+  }, [localProfile?.age, localProfile?.email, localProfile?.id, localProfile?.name, localProfile?.weightKg, profileDialog]);
 
   useEffect(() => {
     const supabase = getSupabaseClient();
@@ -51,6 +87,13 @@ export function ProfileView({ exercises, pendingSync }: { exercises: Exercise[];
     const { data } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user ?? null));
     return () => data.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (quickAdd) {
+      setExerciseDialog(true);
+      onQuickAddConsumed?.();
+    }
+  }, [quickAdd, onQuickAddConsumed]);
 
   useEffect(() => {
     const update = () => setOnline(navigator.onLine);
@@ -63,14 +106,61 @@ export function ProfileView({ exercises, pendingSync }: { exercises: Exercise[];
     };
   }, []);
 
+  const stats = useMemo(() => {
+    const active = exercises.filter((exercise) => !exercise.archivedAt).length;
+    const archived = exercises.filter((exercise) => exercise.archivedAt).length;
+    return { active, archived, pendingSync };
+  }, [exercises, pendingSync]);
+
+  const groups = useMemo(() => ["Todos", ...new Set(exercises.filter((exercise) => !exercise.archivedAt && exercise.muscleGroup).map((exercise) => exercise.muscleGroup!))], [exercises]);
+
   const visibleExercises = useMemo(() => {
     const normalized = search.trim().toLocaleLowerCase("pt-BR");
-    return exercises.filter((exercise) => !exercise.archivedAt && (!normalized || exercise.name.toLocaleLowerCase("pt-BR").includes(normalized)));
-  }, [exercises, search]);
+    return exercises.filter((exercise) => {
+      if (exercise.archivedAt) return false;
+      const matchesSearch = !normalized || exercise.name.toLocaleLowerCase("pt-BR").includes(normalized);
+      const matchesGroup = selectedGroup === "Todos" || exercise.muscleGroup === selectedGroup;
+      return matchesSearch && matchesGroup;
+    });
+  }, [exercises, search, selectedGroup]);
+
+  const suggestedExercises = useMemo(() => {
+    const query = (name || search).trim().toLocaleLowerCase("pt-BR");
+    const baseList = query
+      ? exercises.filter((exercise) => !exercise.archivedAt && exercise.name.toLocaleLowerCase("pt-BR").includes(query))
+      : exercises.filter((exercise) => !exercise.archivedAt);
+
+    const filteredByGroup = selectedGroup === "Todos"
+      ? baseList
+      : baseList.filter((exercise) => exercise.muscleGroup === selectedGroup);
+
+    if (filteredByGroup.length > 0) {
+      return filteredByGroup.slice(0, 8);
+    }
+
+    return exercises.filter((exercise) => !exercise.archivedAt).slice(0, 8);
+  }, [exercises, name, search, selectedGroup]);
 
   function toggleTheme(next: boolean) {
     setDark(next);
     document.documentElement.classList.toggle("dark", next);
+
+    if (localProfile) {
+      void saveProfile({
+        id: localProfile.id,
+        name: localProfile.name,
+        email: localProfile.email,
+        age: localProfile.age,
+        weightKg: localProfile.weightKg,
+        weightUnit: localProfile.weightUnit,
+        theme: next ? "dark" : "light",
+      }).catch(() => {
+        const previousIsDark = localProfile.theme === "dark";
+        setDark(previousIsDark);
+        document.documentElement.classList.toggle("dark", previousIsDark);
+        toast.error("Não foi possível salvar a preferência de tema.");
+      });
+    }
   }
 
   async function createExercise() {
@@ -80,6 +170,23 @@ export function ProfileView({ exercises, pendingSync }: { exercises: Exercise[];
     setGroup("");
     setExerciseDialog(false);
     toast.success("Exercício cadastrado");
+  }
+
+  async function saveProfileChanges() {
+    if (!localProfile || !profileName.trim()) return;
+    const parsedAge = profileAge.trim() === "" ? undefined : Number(profileAge);
+    const parsedWeight = profileWeight.trim() === "" ? undefined : Number(profileWeight);
+    await saveProfile({
+      id: localProfile.id,
+      name: profileName,
+      email: profileEmail.trim() || undefined,
+      age: Number.isFinite(parsedAge) ? parsedAge : undefined,
+      weightKg: Number.isFinite(parsedWeight) ? parsedWeight : undefined,
+      weightUnit: localProfile.weightUnit,
+      theme: localProfile.theme,
+    });
+    setProfileDialog(false);
+    toast.success("Perfil atualizado");
   }
 
   async function signInGoogle() {
@@ -120,12 +227,54 @@ export function ProfileView({ exercises, pendingSync }: { exercises: Exercise[];
     toast.success("Backup exportado");
   }
 
+  async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setImporting(true);
+      const text = await file.text();
+      const json = JSON.parse(text) as Record<string, unknown>;
+      await restoreLocalData(json);
+      toast.success("Backup restaurado", { description: "Seu histórico foi carregado com sucesso." });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Arquivo inválido para restauração.");
+    } finally {
+      setImporting(false);
+      event.target.value = "";
+    }
+  }
+
   return (
     <div className="space-y-6 pb-5">
       <header>
         <p className="text-sm text-muted-foreground">Conta, exercícios e preferências</p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight">Perfil</h1>
       </header>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card className="border-border/70 bg-card/70 shadow-none">
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Exercícios</p>
+            <p className="mt-3 text-3xl font-bold">{stats.active}</p>
+            <p className="mt-1 text-xs text-muted-foreground">ativos no catálogo</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border/70 bg-card/70 shadow-none">
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Arquivados</p>
+            <p className="mt-3 text-3xl font-bold">{stats.archived}</p>
+            <p className="mt-1 text-xs text-muted-foreground">mantidos no histórico</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border/70 bg-card/70 shadow-none">
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Pendentes</p>
+            <p className="mt-3 text-3xl font-bold">{stats.pendingSync}</p>
+            <p className="mt-1 text-xs text-muted-foreground">alterações locais</p>
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid gap-5 lg:grid-cols-[.8fr_1.2fr]">
         <div className="space-y-5">
@@ -135,12 +284,55 @@ export function ProfileView({ exercises, pendingSync }: { exercises: Exercise[];
                 <AvatarFallback className="bg-primary/10 text-primary"><UserRound className="size-6" /></AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
-                <p className="font-semibold">{user?.user_metadata?.full_name ?? "Treine sem cadastro"}</p>
-                <p className="truncate text-sm text-muted-foreground">{user?.email ?? "Seus dados estão salvos neste dispositivo"}</p>
+                <p className="font-semibold">{localProfile?.name ?? user?.user_metadata?.full_name ?? "Treine sem cadastro"}</p>
+                <p className="truncate text-sm text-muted-foreground">{localProfile?.email ?? user?.email ?? "Seus dados estão salvos neste dispositivo"}</p>
+                {(localProfile?.age != null || localProfile?.weightKg != null) ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {localProfile?.age != null ? `${localProfile.age} anos` : ""}
+                    {localProfile?.age != null && localProfile?.weightKg != null ? " • " : ""}
+                    {localProfile?.weightKg != null ? `${localProfile.weightKg.toFixed(1).replace(/\.0$/, "")} kg` : ""}
+                  </p>
+                ) : null}
               </div>
-              {user ? <Badge className="bg-emerald-400/15 text-emerald-300">Conectado</Badge> : null}
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setProfileDialog(true)}>Editar perfil</Button>
+                {user ? <Badge className="bg-emerald-400/15 text-emerald-300">Conectado</Badge> : null}
+              </div>
             </CardContent>
           </Card>
+
+          <Dialog open={profileDialog} onOpenChange={setProfileDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Editar perfil</DialogTitle>
+                <DialogDescription>Atualize seu nome e e-mail. Os dados ficam salvos no dispositivo.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="profile-name-edit">Nome</Label>
+                  <Input id="profile-name-edit" value={profileName} onChange={(event) => setProfileName(event.target.value)} placeholder="Seu nome" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="profile-email-edit">E-mail</Label>
+                  <Input id="profile-email-edit" type="email" value={profileEmail} onChange={(event) => setProfileEmail(event.target.value)} placeholder="voce@email.com" />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="profile-age-edit">Idade</Label>
+                    <Input id="profile-age-edit" type="number" min="10" max="120" value={profileAge} onChange={(event) => setProfileAge(event.target.value)} placeholder="28" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="profile-weight-edit">Peso (kg)</Label>
+                    <Input id="profile-weight-edit" type="number" min="20" max="300" step="0.1" value={profileWeight} onChange={(event) => setProfileWeight(event.target.value)} placeholder="68.5" />
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setProfileDialog(false)}>Cancelar</Button>
+                <Button onClick={() => void saveProfileChanges()} disabled={!profileName.trim() || !localProfile}>Salvar</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           <Card className="border-border/70 bg-card/70 shadow-none">
             <CardHeader><CardTitle className="text-base">Backup e sincronização</CardTitle></CardHeader>
@@ -182,7 +374,11 @@ export function ProfileView({ exercises, pendingSync }: { exercises: Exercise[];
                   </DialogContent>
                 </Dialog>
               )}
-              <Button variant="outline" className="w-full" onClick={downloadData}><Download /> Exportar backup JSON</Button>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Button variant="outline" onClick={downloadData}><Download /> Exportar backup</Button>
+                <Button variant="outline" onClick={() => importInputRef.current?.click()} disabled={importing}>{importing ? "Importando…" : "Importar backup"}</Button>
+              </div>
+              <input ref={importInputRef} type="file" accept="application/json" className="hidden" onChange={handleImport} />
             </CardContent>
           </Card>
 
@@ -206,11 +402,44 @@ export function ProfileView({ exercises, pendingSync }: { exercises: Exercise[];
             <div><CardTitle className="text-base">Catálogo de exercícios</CardTitle><p className="mt-1 text-xs text-muted-foreground">Arquivar preserva todo o histórico</p></div>
             <Dialog open={exerciseDialog} onOpenChange={setExerciseDialog}>
               <DialogTrigger asChild><Button size="sm"><Plus /> Novo</Button></DialogTrigger>
-              <DialogContent>
-                <DialogHeader><DialogTitle>Novo exercício</DialogTitle><DialogDescription>Crie um exercício personalizado para usar nos próximos treinos.</DialogDescription></DialogHeader>
-                <div className="space-y-3">
-                  <div className="space-y-2"><Label htmlFor="exercise-name">Nome</Label><Input id="exercise-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex.: Elevação lateral" /></div>
-                  <div className="space-y-2"><Label htmlFor="exercise-group">Grupo muscular</Label><Input id="exercise-group" value={group} onChange={(event) => setGroup(event.target.value)} placeholder="Ex.: Ombros" /></div>
+              <DialogContent className="max-h-[90dvh] overflow-hidden">
+                <DialogHeader><DialogTitle>Novo exercício</DialogTitle><DialogDescription>Crie um exercício personalizado ou escolha um da base de musculação.</DialogDescription></DialogHeader>
+                <div className="space-y-4 overflow-y-auto pr-1">
+                  <div className="space-y-3">
+                    <div className="space-y-2"><Label htmlFor="exercise-name">Nome</Label><Input id="exercise-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex.: Elevação lateral" /></div>
+                    <div className="space-y-2"><Label htmlFor="exercise-group">Grupo muscular</Label><Input id="exercise-group" value={group} onChange={(event) => setGroup(event.target.value)} placeholder="Ex.: Ombros" /></div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Base rápida</p>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => { setName(""); setGroup(""); }}>Limpar</Button>
+                    </div>
+                    <div className="space-y-3">
+                      <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar exercício" className="h-10" />
+                      <div className="flex flex-wrap gap-2">
+                        {groups.map((groupName) => (
+                          <button key={groupName} type="button" onClick={() => setSelectedGroup(groupName)} className={`rounded-full border px-2.5 py-1.5 text-xs font-medium transition ${selectedGroup === groupName ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-muted-foreground hover:border-primary/30 hover:text-foreground"}`}>
+                            {groupName}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="mt-3 max-h-60 space-y-1 overflow-y-auto">
+                      {suggestedExercises.length > 0 ? suggestedExercises.map((exercise) => (
+                        <button key={exercise.id} type="button" onClick={() => { setName(exercise.name); setGroup(exercise.muscleGroup ?? ""); setExerciseDialog(false); toast.success(`${exercise.name} pronto para usar`); }} className="flex w-full items-center justify-between rounded-xl border border-border/70 bg-background/60 px-3 py-2 text-left transition hover:border-primary/35 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-medium">{exercise.name}</span>
+                            <span className="block truncate text-xs text-muted-foreground">{exercise.muscleGroup ?? "Sem grupo"}</span>
+                          </span>
+                          <span className="ml-3 rounded-full border border-primary/25 bg-primary/8 px-2 py-1 text-[11px] font-medium text-primary">Usar</span>
+                        </button>
+                      )) : (
+                        <div className="rounded-xl border border-dashed border-border/70 bg-background/40 px-3 py-4 text-sm text-muted-foreground">
+                          Nenhum exercício encontrado. Digite um nome para buscar ou cadastre um novo abaixo.
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 <DialogFooter><Button onClick={createExercise} disabled={!name.trim()}>Cadastrar exercício</Button></DialogFooter>
               </DialogContent>
