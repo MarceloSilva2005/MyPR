@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - ".sync/**"
+      - ".sync/editor.a"
 
 permissions:
   contents: write
@@ -17,7 +17,7 @@ jobs:
       - name: Rebuild corrected files
         run: |
           cat .sync/profile.1 .sync/profile.2 | base64 -d | gzip -d > src/components/mypr/profile-view.tsx
-          cat .sync/editor.1 .sync/editor.2 | base64 -d | gzip -d > src/components/mypr/workout-editor.tsx
+          cat .sync/editor.a .sync/editor.b .sync/editor.c .sync/editor.d | base64 -d | gzip -d > src/components/mypr/workout-editor.tsx
           cat .sync/db.1 .sync/db.2 | base64 -d | gzip -d > src/lib/db.ts
           rm -rf .sync
           rm -f .mypr-sync.zip .remaining.patch.gz
