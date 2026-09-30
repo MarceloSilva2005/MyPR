@@ -230,6 +230,11 @@ export function ProfileView({
   async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Backup muito grande", { description: "O limite para importação é 10 MB." });
+      event.target.value = "";
+      return;
+    }
 
     try {
       setImporting(true);
@@ -310,11 +315,11 @@ export function ProfileView({
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="profile-name-edit">Nome</Label>
-                  <Input id="profile-name-edit" value={profileName} onChange={(event) => setProfileName(event.target.value)} placeholder="Seu nome" />
+                  <Input id="profile-name-edit" maxLength={80} value={profileName} onChange={(event) => setProfileName(event.target.value)} placeholder="Seu nome" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="profile-email-edit">E-mail</Label>
-                  <Input id="profile-email-edit" type="email" value={profileEmail} onChange={(event) => setProfileEmail(event.target.value)} placeholder="voce@email.com" />
+                  <Input id="profile-email-edit" type="email" maxLength={254} value={profileEmail} onChange={(event) => setProfileEmail(event.target.value)} placeholder="voce@email.com" />
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
@@ -406,8 +411,8 @@ export function ProfileView({
                 <DialogHeader><DialogTitle>Novo exercício</DialogTitle><DialogDescription>Crie um exercício personalizado ou escolha um da base de musculação.</DialogDescription></DialogHeader>
                 <div className="space-y-4 overflow-y-auto pr-1">
                   <div className="space-y-3">
-                    <div className="space-y-2"><Label htmlFor="exercise-name">Nome</Label><Input id="exercise-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex.: Elevação lateral" /></div>
-                    <div className="space-y-2"><Label htmlFor="exercise-group">Grupo muscular</Label><Input id="exercise-group" value={group} onChange={(event) => setGroup(event.target.value)} placeholder="Ex.: Ombros" /></div>
+                    <div className="space-y-2"><Label htmlFor="exercise-name">Nome</Label><Input id="exercise-name" maxLength={120} value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex.: Elevação lateral" /></div>
+                    <div className="space-y-2"><Label htmlFor="exercise-group">Grupo muscular</Label><Input id="exercise-group" maxLength={80} value={group} onChange={(event) => setGroup(event.target.value)} placeholder="Ex.: Ombros" /></div>
                   </div>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between gap-3">

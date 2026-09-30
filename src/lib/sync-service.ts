@@ -39,7 +39,7 @@ async function pushWorkoutBundle(bundle: WorkoutBundle, userId: string) {
     created_at: bundle.workout.createdAt,
     updated_at: bundle.workout.updatedAt,
     deleted_at: bundle.workout.deletedAt ?? null,
-  });
+  }, { onConflict: "user_id,id" });
   if (workoutError) throw workoutError;
 
   if (bundle.exercises.length > 0) {
@@ -54,6 +54,7 @@ async function pushWorkoutBundle(bundle: WorkoutBundle, userId: string) {
         updated_at: item.updatedAt,
         deleted_at: item.deletedAt ?? null,
       })),
+      { onConflict: "user_id,id" },
     );
     if (error) throw error;
   }
@@ -72,6 +73,7 @@ async function pushWorkoutBundle(bundle: WorkoutBundle, userId: string) {
         updated_at: item.updatedAt,
         deleted_at: item.deletedAt ?? null,
       })),
+      { onConflict: "user_id,id" },
     );
     if (error) throw error;
   }
@@ -140,6 +142,7 @@ export async function syncNow() {
   if (localExercises.length > 0) {
     const { error } = await supabase.from("exercises").upsert(
       localExercises.map((exercise) => exerciseRow(exercise, userId)),
+      { onConflict: "user_id,id" },
     );
     if (error) throw error;
   }
@@ -149,12 +152,12 @@ export async function syncNow() {
     if (operation.entity === "exercise") {
       const { error } = await supabase
         .from("exercises")
-        .upsert(exerciseRow(operation.payload as Exercise, userId));
+        .upsert(exerciseRow(operation.payload as Exercise, userId), { onConflict: "user_id,id" });
       if (error) throw error;
     } else if (operation.entity === "profile") {
       const { error } = await supabase
         .from("profiles")
-        .upsert(profileRow(operation.payload as Profile, userId));
+        .upsert(profileRow(operation.payload as Profile, userId), { onConflict: "user_id" });
       if (error) throw error;
     } else if (operation.entity === "workout_bundle") {
       await pushWorkoutBundle(operation.payload as WorkoutBundle, userId);

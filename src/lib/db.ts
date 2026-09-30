@@ -11,6 +11,7 @@ import type {
   WorkoutExercise,
   WorkoutTemplate,
 } from "@/lib/domain";
+import { backupSchema, exerciseInputSchema, profileInputSchema } from "@/lib/validation";
 
 export const ACTIVE_PROFILE_STORAGE_KEY = "mypr-active-profile-id";
 
@@ -260,9 +261,10 @@ export async function saveProfile(input: {
   weightUnit?: Profile["weightUnit"];
   theme?: Profile["theme"];
 }) {
+  const parsedInput = profileInputSchema.parse(input);
   const now = new Date().toISOString();
-  const existing = input.id ? await db.profiles.get(input.id) : undefined;
-  const profile = buildProfileRecord(input, now, existing);
+  const existing = parsedInput.id ? await db.profiles.get(parsedInput.id) : undefined;
+  const profile = buildProfileRecord(parsedInput, now, existing);
 
   await db.transaction("rw", [db.profiles, db.syncOperations], async () => {
     await db.profiles.put(profile);
@@ -289,12 +291,13 @@ export async function listProfiles() {
 }
 
 export async function saveExercise(input: { id?: string; name: string; muscleGroup?: string }) {
+  const parsedInput = exerciseInputSchema.parse(input);
   const now = new Date().toISOString();
-  const existing = input.id ? await db.exercises.get(input.id) : undefined;
+  const existing = parsedInput.id ? await db.exercises.get(parsedInput.id) : undefined;
   const exercise: Exercise = {
     id: existing?.id ?? crypto.randomUUID(),
-    name: input.name.trim(),
-    muscleGroup: input.muscleGroup?.trim() || undefined,
+    name: parsedInput.name,
+    muscleGroup: parsedInput.muscleGroup || undefined,
     source: existing?.source ?? "custom",
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
@@ -395,14 +398,7 @@ export async function listWorkoutTemplates() {
 }
 
 export async function restoreLocalData(payload: unknown) {
-  const data = payload as {
-    profiles?: unknown[];
-    exercises?: unknown[];
-    workouts?: unknown[];
-    workoutExercises?: unknown[];
-    setEntries?: unknown[];
-    templates?: unknown[];
-  };
+  const data = backupSchema.parse(payload);
 
   await db.transaction(
     "rw",
@@ -416,12 +412,12 @@ export async function restoreLocalData(payload: unknown) {
       await db.syncOperations.clear();
       await db.templates.clear();
 
-      if (data.profiles?.length) await db.profiles.bulkPut(data.profiles as never[]);
-      if (data.exercises?.length) await db.exercises.bulkPut(data.exercises as never[]);
-      if (data.workouts?.length) await db.workouts.bulkPut(data.workouts as never[]);
-      if (data.workoutExercises?.length) await db.workoutExercises.bulkPut(data.workoutExercises as never[]);
-      if (data.setEntries?.length) await db.setEntries.bulkPut(data.setEntries as never[]);
-      if (data.templates?.length) await db.templates.bulkPut(data.templates as never[]);
+      if (data.profiles?.length) await db.profiles.bulkPut(data.profiles);
+      if (data.exercises?.length) await db.exercises.bulkPut(data.exercises);
+      if (data.workouts?.length) await db.workouts.bulkPut(data.workouts);
+      if (data.workoutExercises?.length) await db.workoutExercises.bulkPut(data.workoutExercises);
+      if (data.setEntries?.length) await db.setEntries.bulkPut(data.setEntries);
+      if (data.templates?.length) await db.templates.bulkPut(data.templates);
     },
   );
 }
