@@ -11,4 +11,4 @@ O MyPR é o seu parceiro de treino. Registre séries, repetições e cargas de f
 
 ## Contributors
 
-- [@Felipe1dev](https://github.com/Felipe1dev) — sugestões e revisão das melhorias de segurança do projeto.
+- [@Felipe1dev](https://github.com/Felipe1dev) — desenvolvimento de parte significativa do MyPR, incluindo a tela de cadastro, diversas funcionalidades e trechos importantes da base de código, além de sugestões e revisão das melhorias de segurança.
