@@ -146,3 +146,19 @@ export function recordLabel(record: SetRecord) {
   if (record.kind === "load") return `Recorde · ${formatLoadKg(record.loadKg)} kg`;
   return `Recorde · ${record.reps} reps com ${formatLoadKg(record.loadKg)} kg`;
 }
+
+export function suggestNextLoad(sets: LoggedSetSnapshot[], step = LOAD_STEP_KG) {
+  const working = sets.filter((set) => set.loadKg > 0 && set.reps > 0);
+  if (working.length === 0) return null;
+  const peak = Math.max(...working.map((set) => set.loadKg));
+  const atPeak = working.filter((set) => Math.abs(set.loadKg - peak) < 0.001);
+  const ready = atPeak.every((set) => set.reps >= 8);
+  const loadKg = roundLoad(ready ? peak + step : peak);
+  const formatted = formatLoadKg(loadKg);
+  return {
+    loadKg,
+    sentence: ready
+      ? `Sobe para ${formatted} kg. Na última sessão as séries dessa carga fecharam 8 ou mais.`
+      : `Mantém ${formatted} kg.`,
+  };
+}

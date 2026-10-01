@@ -35,6 +35,7 @@ import {
   nextRestPreset,
   recordBeatenBySet,
   recordLabel,
+  suggestNextLoad,
   stepLoad,
   stepReps,
   type WorkoutLogHistory,
@@ -343,6 +344,14 @@ export function WorkoutEditor({
     }
   }
 
+  function applySuggestedLoad(itemId: string, loadKg: number) {
+    setItems((current) =>
+      current.map((item) => item.id === itemId
+        ? { ...item, sets: item.sets.map((set) => set.completed ? set : { ...set, loadKg }) }
+        : item),
+    );
+  }
+
   function updateSetValue(itemId: string, setId: string, field: "loadKg" | "reps", rawValue: string) {
     setItems((current) =>
       current.map((item) => {
@@ -536,6 +545,16 @@ export function WorkoutEditor({
                           Última vez · {shortDate(previousSessions.get(item.exerciseId)!.date)} · {formatPreviousSets(previousSessions.get(item.exerciseId)!.sets)}
                         </p>
                       ) : null}
+                      {(() => {
+                        const suggestion = suggestNextLoad(previousSessions.get(item.exerciseId)?.sets ?? []);
+                        if (!suggestion) return null;
+                        return (
+                          <p className="text-xs text-foreground">
+                            {suggestion.sentence}{" "}
+                            <button type="button" className="text-primary" onClick={() => applySuggestedLoad(item.id, suggestion.loadKg)}>Usar</button>
+                          </p>
+                        );
+                      })()}
                     </div>
                     <Button type="button" variant="ghost" size="sm" className="h-9 shrink-0 px-2 text-muted-foreground" aria-label={`Descanso de ${restSecondsFor(item.exerciseId)} segundos. Toque para alterar.`} onClick={() => cycleRest(item.exerciseId)}>
                       {restSecondsFor(item.exerciseId)} s

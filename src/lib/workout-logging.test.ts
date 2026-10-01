@@ -9,6 +9,7 @@ import {
   recordLabel,
   stepLoad,
   stepReps,
+  suggestNextLoad,
 } from "./workout-logging";
 
 const now = "2026-09-01T12:00:00.000Z";
@@ -118,5 +119,12 @@ describe("registro de treino", () => {
     expect(nextRestPreset(90)).toBe(120);
     expect(nextRestPreset(180)).toBe(60);
     expect(nextRestPreset(100)).toBe(120);
+  });
+
+  it("sobe 2,5 kg só quando as séries da carga máxima fecharam 8", () => {
+    expect(suggestNextLoad([])).toBeNull();
+    expect(suggestNextLoad([{ loadKg: 60, reps: 8 }, { loadKg: 60, reps: 8 }])).toMatchObject({ loadKg: 62.5 });
+    expect(suggestNextLoad([{ loadKg: 60, reps: 8 }, { loadKg: 60, reps: 7 }])?.loadKg).toBe(60);
+    expect(suggestNextLoad([{ loadKg: 60, reps: 6 }, { loadKg: 40, reps: 12 }])?.sentence.startsWith("Mantém")).toBe(true);
   });
 });
