@@ -14,6 +14,7 @@ import type {
 import { backupSchema, exerciseInputSchema, profileInputSchema } from "@/lib/validation";
 
 export const ACTIVE_PROFILE_STORAGE_KEY = "mypr-active-profile-id";
+export const THEME_STORAGE_KEY = "mypr-theme";
 
 const LEGACY_DEFAULT_EXERCISE_IDS: Record<string, string> = {
   "default-peito-1": "85dfc248-f912-5096-8974-5bd4172b4db5",
@@ -211,6 +212,16 @@ export function setStoredActiveProfileId(profileId: string | null) {
     return;
   }
   window.localStorage.removeItem(ACTIVE_PROFILE_STORAGE_KEY);
+}
+
+export function getStoredTheme(): "dark" | "light" {
+  if (typeof window === "undefined") return "dark";
+  return window.localStorage.getItem(THEME_STORAGE_KEY) === "light" ? "light" : "dark";
+}
+
+export function setStoredTheme(theme: "dark" | "light") {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(THEME_STORAGE_KEY, theme);
 }
 
 async function initializeDatabaseOnce() {

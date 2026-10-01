@@ -28,7 +28,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { Exercise } from "@/lib/domain";
-import { archiveExercise, exportLocalData, getStoredActiveProfileId, listProfiles, resetLocalData, restoreLocalData, saveExercise, saveProfile } from "@/lib/db";
+import { archiveExercise, exportLocalData, getStoredActiveProfileId, listProfiles, resetLocalData, restoreLocalData, saveExercise, saveProfile, setStoredActiveProfileId, setStoredTheme } from "@/lib/db";
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase";
 import { syncNow } from "@/lib/sync-service";
 
@@ -145,22 +145,24 @@ export function ProfileView({
     setDark(next);
     document.documentElement.classList.toggle("dark", next);
 
-    if (localProfile) {
-      void saveProfile({
-        id: localProfile.id,
-        name: localProfile.name,
-        email: localProfile.email,
-        age: localProfile.age,
-        weightKg: localProfile.weightKg,
-        weightUnit: localProfile.weightUnit,
-        theme: next ? "dark" : "light",
-      }).catch(() => {
-        const previousIsDark = localProfile.theme === "dark";
-        setDark(previousIsDark);
-        document.documentElement.classList.toggle("dark", previousIsDark);
-        toast.error("Não foi possível salvar a preferência de tema.");
-      });
-    }
+    const theme = next ? "dark" : "light";
+    setStoredTheme(theme);
+    if (!localProfile) return;
+    void saveProfile({
+      id: localProfile.id,
+      name: localProfile.name,
+      email: localProfile.email,
+      age: localProfile.age,
+      weightKg: localProfile.weightKg,
+      weightUnit: localProfile.weightUnit,
+      theme,
+    }).catch(() => {
+      const previousIsDark = localProfile.theme === "dark";
+      setDark(previousIsDark);
+      setStoredTheme(previousIsDark ? "dark" : "light");
+      document.documentElement.classList.toggle("dark", previousIsDark);
+      toast.error("Não foi possível salvar a preferência de tema.");
+    });
   }
 
   async function createExercise() {
@@ -173,18 +175,19 @@ export function ProfileView({
   }
 
   async function saveProfileChanges() {
-    if (!localProfile || !profileName.trim()) return;
+    if (!profileName.trim()) return;
     const parsedAge = profileAge.trim() === "" ? undefined : Number(profileAge);
     const parsedWeight = profileWeight.trim() === "" ? undefined : Number(profileWeight);
-    await saveProfile({
-      id: localProfile.id,
+    const saved = await saveProfile({
+      id: localProfile?.id,
       name: profileName,
       email: profileEmail.trim() || undefined,
       age: Number.isFinite(parsedAge) ? parsedAge : undefined,
       weightKg: Number.isFinite(parsedWeight) ? parsedWeight : undefined,
-      weightUnit: localProfile.weightUnit,
-      theme: localProfile.theme,
+      weightUnit: localProfile?.weightUnit,
+      theme: localProfile?.theme ?? (dark ? "dark" : "light"),
     });
+    setStoredActiveProfileId(saved.id);
     setProfileDialog(false);
     toast.success("Perfil atualizado");
   }
@@ -334,7 +337,7 @@ export function ProfileView({
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setProfileDialog(false)}>Cancelar</Button>
-                <Button onClick={() => void saveProfileChanges()} disabled={!profileName.trim() || !localProfile}>Salvar</Button>
+                <Button onClick={() => void saveProfileChanges()} disabled={!profileName.trim()}>Salvar</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>

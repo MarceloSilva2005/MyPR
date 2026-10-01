@@ -14,9 +14,8 @@ import { ProfileView } from "@/components/mypr/profile-view";
 import { WorkoutEditor } from "@/components/mypr/workout-editor";
 import { WorkoutDetails } from "@/components/mypr/workout-details";
 import { PwaRegister } from "@/components/mypr/pwa-register";
-import { UserSetup } from "@/components/mypr/user-setup";
 import { useMyPrData } from "@/hooks/use-mypr-data";
-import { db, getStoredActiveProfileId, setStoredActiveProfileId } from "@/lib/db";
+import { db, getStoredActiveProfileId, getStoredTheme, setStoredActiveProfileId } from "@/lib/db";
 import { cn } from "@/lib/utils";
 
 type View = "home" | "workouts" | "analytics" | "profile";
@@ -65,8 +64,8 @@ export function AppShell() {
   const activeProfile = profiles?.find((profile) => profile.id === activeProfileId) ?? profiles?.[0] ?? null;
 
   useEffect(() => {
-    if (!activeProfile) return;
-    document.documentElement.classList.toggle("dark", activeProfile.theme === "dark");
+    const theme = activeProfile?.theme ?? getStoredTheme();
+    document.documentElement.classList.toggle("dark", theme === "dark");
   }, [activeProfile]);
 
   const openEditor = (state?: Omit<EditorState, "open">) => {
@@ -99,10 +98,6 @@ export function AppShell() {
         <div><LoaderCircle className="mx-auto size-7 animate-spin text-primary" /><p className="mt-3 text-sm text-muted-foreground">Preparando seu histórico…</p></div>
       </div>
     );
-  }
-
-  if (!activeProfile) {
-    return <UserSetup onComplete={(profile) => setActiveProfileIdState(profile.id)} />;
   }
 
   return (
