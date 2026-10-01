@@ -49,6 +49,7 @@ const workoutSchema = z.object({
   id: z.string().uuid(),
   performedAt: dateSchema,
   status: z.enum(["draft", "in_progress", "completed"]),
+  routineName: z.string().trim().min(1).max(120).optional(),
   createdAt: timestampSchema,
   updatedAt: timestampSchema,
   deletedAt: timestampSchema.optional(),
@@ -93,6 +94,7 @@ const templateExerciseSchema = z.object({
 const templateSchema = z.object({
   id: z.string().uuid(),
   name: z.string().trim().min(1).max(120),
+  days: z.array(z.number().int().min(0).max(6)).max(7).optional(),
   items: z.array(templateExerciseSchema).max(200),
   createdAt: timestampSchema,
   updatedAt: timestampSchema,

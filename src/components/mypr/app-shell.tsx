@@ -93,7 +93,7 @@ export function AppShell() {
       return <AnalyticsView exercises={data.exercises} workouts={data.workouts} workoutExercises={data.workoutExercises} sets={data.sets} summaries={data.summaries} records={data.records} onBack={() => setView("you")} />;
     }
     if (view === "you") {
-      return <ProfileView exercises={data.exercises} pendingSync={data.pendingSync} quickAdd={quickAddExercise} onQuickAddConsumed={() => setQuickAddExercise(false)} onOpenAnalytics={() => setView("analytics")} />;
+      return <ProfileView exercises={data.exercises} pendingSync={data.pendingSync} quickAdd={quickAddExercise} onQuickAddConsumed={() => setQuickAddExercise(false)} onOpenAnalytics={() => setView("analytics")} templates={data.templates} />;
     }
     const inProgress = data.summaries.find((workout) => workout.status !== "completed");
     const lastCompletedWorkout = data.summaries.find((workout) => workout.status === "completed");

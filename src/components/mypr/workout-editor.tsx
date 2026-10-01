@@ -24,7 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import type { Exercise, WorkoutBundle, WorkoutDraftExercise, WorkoutTemplate } from "@/lib/domain";
 import { saveExercise, saveWorkoutBundle, saveWorkoutTemplate, workoutBundle } from "@/lib/db";
-import { createWorkoutTemplate } from "@/lib/workout-templates";
+import { WEEKDAYS, createWorkoutTemplate, routineDayLabel } from "@/lib/workout-templates";
 import {
   DEFAULT_REST_SECONDS,
   completedSetsForExercise,
@@ -109,8 +109,13 @@ export function WorkoutEditor({
   const [remainingMs, setRemainingMs] = useState(0);
   const [timerNote, setTimerNote] = useState("");
   const [prBanner, setPrBanner] = useState<string | null>(null);
+  const [routineName, setRoutineName] = useState("");
+  const [routineForm, setRoutineForm] = useState(false);
+  const [routineTitle, setRoutineTitle] = useState("");
+  const [routineDays, setRoutineDays] = useState<number[]>([]);
   const exercisesRef = useRef(exercises);
   const historyRef = useRef(history);
+  const templatesRef = useRef(templates);
   const prToken = useRef(0);
 
   useEffect(() => {
@@ -120,6 +125,10 @@ export function WorkoutEditor({
   useEffect(() => {
     historyRef.current = history;
   }, [history]);
+
+  useEffect(() => {
+    templatesRef.current = templates;
+  }, [templates]);
 
   const previousSessions = useMemo(
     () => latestSessionsByExercise(history, workoutId || undefined),
@@ -131,6 +140,7 @@ export function WorkoutEditor({
     setTimer(null);
     setPrBanner(null);
     setTimerNote("");
+    setRoutineForm(false);
   }, [open]);
 
   useEffect(() => {
@@ -186,12 +196,30 @@ export function WorkoutEditor({
           setWorkoutId(source.repeat ? crypto.randomUUID() : bundle.workout.id);
           setCreatedAt(source.repeat ? new Date().toISOString() : bundle.workout.createdAt);
           setDate(source.repeat ? format(new Date(), "yyyy-MM-dd") : bundle.workout.performedAt);
+          setRoutineName(bundle.workout.routineName ?? "");
           setItems(nextItems);
         }
+      } else if (source.templateId && !cancelled) {
+        const template = templatesRef.current.find((entry) => entry.id === source.templateId);
+        setWorkoutId(crypto.randomUUID());
+        setCreatedAt(new Date().toISOString());
+        setDate(format(new Date(), "yyyy-MM-dd"));
+        setRoutineName(template?.name ?? "");
+        setItems(
+          template
+            ? template.items.map((item) => ({
+                id: crypto.randomUUID(),
+                exerciseId: item.exerciseId,
+                name: item.name,
+                sets: item.sets.map((set) => ({ id: crypto.randomUUID(), reps: set.reps, loadKg: set.loadKg, completed: false })),
+              }))
+            : [],
+        );
       } else if (!cancelled) {
         setWorkoutId(crypto.randomUUID());
         setCreatedAt(new Date().toISOString());
         setDate(format(new Date(), "yyyy-MM-dd"));
+        setRoutineName("");
         setItems([]);
       }
       if (!cancelled) setReady(true);
@@ -200,7 +228,7 @@ export function WorkoutEditor({
     return () => {
       cancelled = true;
     };
-  }, [open, source.workoutId, source.repeat]);
+  }, [open, source.templateId, source.workoutId, source.repeat]);
 
   const buildBundle = useCallback(
     (status: "in_progress" | "completed"): WorkoutBundle => {
@@ -210,6 +238,7 @@ export function WorkoutEditor({
           id: workoutId,
           performedAt: date,
           status,
+          routineName: routineName.trim() || undefined,
           createdAt: createdAt || now,
           updatedAt: now,
         },
@@ -235,7 +264,7 @@ export function WorkoutEditor({
         ),
       };
     },
-    [createdAt, date, items, workoutId],
+    [createdAt, date, items, routineName, workoutId],
   );
 
   useEffect(() => {
@@ -280,19 +309,38 @@ export function WorkoutEditor({
         sets: item.sets.map((set) => ({ id: crypto.randomUUID(), reps: set.reps, loadKg: set.loadKg, completed: false })),
       })),
     );
+    setRoutineName(template.name);
     setPickerOpen(false);
     setSearch("");
   }
 
-  async function saveCurrentTemplate() {
+  function openRoutineForm() {
     if (items.length === 0) {
-      toast.error("Adicione pelo menos um exercício antes de salvar o modelo.");
+      toast.error("Adicione pelo menos um exercício antes de salvar a rotina.");
       return;
     }
-    const template = createWorkoutTemplate(`Treino ${format(new Date(), "dd/MM")}`, items);
-    const saved = await saveWorkoutTemplate(template);
-    toast.success("Modelo salvo", { description: saved.name });
-    setPickerOpen(false);
+    setRoutineTitle(routineName);
+    const match = templates.find((template) => template.name === routineName);
+    setRoutineDays(match?.days ?? []);
+    setRoutineForm(true);
+  }
+
+  async function saveCurrentTemplate() {
+    const title = routineTitle.trim();
+    if (!title) {
+      toast.error("Dê um nome à rotina.");
+      return;
+    }
+    try {
+      const draft = createWorkoutTemplate(title, items, routineDays);
+      const existing = templates.find((template) => template.name.localeCompare(title, "pt-BR", { sensitivity: "accent" }) === 0);
+      const saved = await saveWorkoutTemplate(existing ? { ...draft, id: existing.id, createdAt: existing.createdAt } : draft);
+      setRoutineName(saved.name);
+      setRoutineForm(false);
+      toast.success("Rotina salva", { description: routineDayLabel(saved.days) });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível salvar a rotina.");
+    }
   }
 
   function updateSetValue(itemId: string, setId: string, field: "loadKg" | "reps", rawValue: string) {
@@ -563,20 +611,44 @@ export function WorkoutEditor({
                     ))}
                   </div>
 
-                  <div className="mt-4 border-t border-border/70 pt-4">
+                  <div className="mt-4 border-t border-border pt-4">
                     <div className="mb-3 flex items-center justify-between gap-3">
-                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Modelos salvos</p>
-                      <Button variant="secondary" size="sm" onClick={saveCurrentTemplate}>Salvar modelo</Button>
+                      <p className="mypr-kicker">Rotinas</p>
+                      <Button variant="secondary" size="sm" onClick={openRoutineForm}>Salvar rotina</Button>
                     </div>
+                    {routineForm ? (
+                      <div className="mb-3 space-y-3 border border-border p-3">
+                        <Label htmlFor="routine-name">Nome</Label>
+                        <Input id="routine-name" value={routineTitle} onChange={(event) => setRoutineTitle(event.target.value)} placeholder="Peito e tríceps" className="bg-background" />
+                        <div className="flex gap-1" role="group" aria-label="Dias da rotina">
+                          {WEEKDAYS.map((day) => {
+                            const selected = routineDays.includes(day.day);
+                            return (
+                              <button
+                                key={day.day}
+                                type="button"
+                                aria-pressed={selected}
+                                aria-label={day.label}
+                                className={selected ? "h-9 flex-1 bg-primary text-xs font-semibold text-primary-foreground" : "h-9 flex-1 border border-border text-xs text-muted-foreground"}
+                                onClick={() => setRoutineDays((current) => current.includes(day.day) ? current.filter((value) => value !== day.day) : [...current, day.day])}
+                              >
+                                {day.short}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <Button className="w-full" onClick={() => void saveCurrentTemplate()} disabled={!routineTitle.trim()}>Guardar</Button>
+                      </div>
+                    ) : null}
                     {templates.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Nenhum modelo salvo ainda.</p>
+                      <p className="text-sm text-muted-foreground">Nenhuma rotina salva.</p>
                     ) : (
                       <div className="space-y-2">
                         {templates.map((template) => (
-                          <button key={template.id} type="button" onClick={() => applyTemplate(template)} className="flex w-full items-center justify-between rounded-xl border border-border/70 bg-background/60 px-3 py-2 text-left hover:border-primary/40 hover:bg-primary/5">
+                          <button key={template.id} type="button" onClick={() => applyTemplate(template)} className="flex w-full items-center justify-between border border-border bg-background px-3 py-2 text-left">
                             <span>
                               <span className="block text-sm font-medium">{template.name}</span>
-                              <span className="block text-xs text-muted-foreground">{template.items.length} exercícios</span>
+                              <span className="block text-xs text-muted-foreground">{routineDayLabel(template.days)} · {template.items.length} exercícios</span>
                             </span>
                             <span className="text-xs text-primary">Usar</span>
                           </button>
@@ -601,7 +673,7 @@ export function WorkoutEditor({
                   </Button>
                   {templates.length > 0 ? (
                     <Button variant="secondary" className="h-10 w-full" onClick={() => setPickerOpen(true)}>
-                      Usar modelo salvo
+                      Usar rotina salva
                     </Button>
                   ) : null}
                 </div>
@@ -616,7 +688,7 @@ export function WorkoutEditor({
           )}
         </div>
 
-        <footer className="border-t border-border/70 bg-background/95 px-4 py-3 backdrop-blur sm:px-6">
+        <footer className="border-t border-border bg-background px-4 py-3 sm:px-6">
           <div className="flex items-center justify-between gap-3">
             <Badge variant="secondary" className="hidden sm:flex">{items.flatMap((item) => item.sets).filter((set) => set.completed).length} séries concluídas</Badge>
             <Button className="h-11 flex-1 sm:max-w-56" onClick={finishWorkout} disabled={saving || !ready}>

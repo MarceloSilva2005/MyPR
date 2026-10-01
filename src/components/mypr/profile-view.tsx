@@ -27,7 +27,8 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import type { Exercise } from "@/lib/domain";
+import type { Exercise, WorkoutTemplate } from "@/lib/domain";
+import { routineDayLabel } from "@/lib/workout-templates";
 import { archiveExercise, exportLocalData, getStoredActiveProfileId, listProfiles, resetLocalData, restoreLocalData, saveExercise, saveProfile, setStoredActiveProfileId, setStoredTheme } from "@/lib/db";
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase";
 import { syncNow } from "@/lib/sync-service";
@@ -38,12 +39,14 @@ export function ProfileView({
   quickAdd = false,
   onQuickAddConsumed,
   onOpenAnalytics,
+  templates = [],
 }: {
   exercises: Exercise[];
   pendingSync: number;
   quickAdd?: boolean;
   onQuickAddConsumed?: () => void;
   onOpenAnalytics?: () => void;
+  templates?: WorkoutTemplate[];
 }) {
   const [dark, setDark] = useState(true);
   const [search, setSearch] = useState("");
@@ -261,6 +264,22 @@ export function ProfileView({
         <p className="mypr-kicker">Conta e aparelho</p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight">Você</h1>
       </header>
+
+      <section className="border-b border-border pb-4">
+        <h2 className="text-2xl">Rotinas</h2>
+        {templates.length === 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">Salve uma rotina com nome durante o treino.</p>
+        ) : (
+          <ul className="mt-3">
+            {templates.map((template) => (
+              <li key={template.id} className="flex items-baseline justify-between gap-3 border-t border-border py-2 text-sm">
+                <span>{template.name}</span>
+                <span className="text-muted-foreground">{routineDayLabel(template.days)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {onOpenAnalytics ? (
         <Button variant="outline" className="h-12 w-full justify-between" onClick={onOpenAnalytics}>
