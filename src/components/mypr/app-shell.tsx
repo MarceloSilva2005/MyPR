@@ -168,7 +168,7 @@ export function AppShell() {
 
       {data ? (
         <>
-          <WorkoutEditor open={editor.open} source={{ workoutId: editor.workoutId, repeat: editor.repeat }} exercises={data.exercises} templates={data.templates} onOpenChange={(open) => setEditor((current) => ({ ...current, open }))} />
+          <WorkoutEditor open={editor.open} source={{ workoutId: editor.workoutId, repeat: editor.repeat }} exercises={data.exercises} templates={data.templates} history={{ workouts: data.workouts, workoutExercises: data.workoutExercises, sets: data.sets }} onOpenChange={(open) => setEditor((current) => ({ ...current, open }))} />
           <WorkoutDetails workoutId={detailsId} exercises={data.exercises} onClose={() => setDetailsId(undefined)} onEdit={(workoutId) => openEditor({ workoutId })} onRepeat={(workoutId) => openEditor({ workoutId, repeat: true })} />
         </>
       ) : null}

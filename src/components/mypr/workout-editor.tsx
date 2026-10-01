@@ -8,8 +8,10 @@ import {
   Check,
   Copy,
   Dumbbell,
+  Minus,
   Plus,
   Search,
+  Timer,
   Trash2,
   X,
 } from "lucide-react";
@@ -23,8 +25,55 @@ import { Badge } from "@/components/ui/badge";
 import type { Exercise, WorkoutBundle, WorkoutDraftExercise, WorkoutTemplate } from "@/lib/domain";
 import { saveExercise, saveWorkoutBundle, saveWorkoutTemplate, workoutBundle } from "@/lib/db";
 import { createWorkoutTemplate } from "@/lib/workout-templates";
+import {
+  DEFAULT_REST_SECONDS,
+  completedSetsForExercise,
+  formatLoadKg,
+  formatPreviousSets,
+  formatSetSnapshot,
+  latestSessionsByExercise,
+  nextRestPreset,
+  recordBeatenBySet,
+  recordLabel,
+  stepLoad,
+  stepReps,
+  type WorkoutLogHistory,
+} from "@/lib/workout-logging";
 
 type EditorSource = { workoutId?: string; repeat?: boolean };
+const REST_STORAGE_KEY = "mypr-rest-seconds";
+
+function readRestSeconds(exerciseId: string) {
+  if (typeof window === "undefined") return DEFAULT_REST_SECONDS;
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(REST_STORAGE_KEY) ?? "{}") as Record<string, unknown>;
+    const value = parsed[exerciseId];
+    return typeof value === "number" && value >= 15 && value <= 600 ? value : DEFAULT_REST_SECONDS;
+  } catch {
+    return DEFAULT_REST_SECONDS;
+  }
+}
+
+function writeRestSeconds(exerciseId: string, seconds: number) {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(REST_STORAGE_KEY) ?? "{}") as Record<string, number>;
+    parsed[exerciseId] = seconds;
+    window.localStorage.setItem(REST_STORAGE_KEY, JSON.stringify(parsed));
+  } catch {
+    // A preferência de descanso fica neste aparelho. O treino segue sem ela.
+  }
+}
+
+function shortDate(date: string) {
+  return format(new Date(`${date}T12:00:00`), "dd/MM");
+}
+
+function formatClock(milliseconds: number) {
+  const total = Math.ceil(milliseconds / 1000);
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
 
 function newSet(loadKg: number | null = null, reps: number | null = null, completed = false) {
   return { id: crypto.randomUUID(), loadKg, reps, completed };
@@ -35,12 +84,14 @@ export function WorkoutEditor({
   source,
   exercises,
   templates,
+  history,
   onOpenChange,
 }: {
   open: boolean;
   source: EditorSource;
   exercises: Exercise[];
   templates: WorkoutTemplate[];
+  history: WorkoutLogHistory;
   onOpenChange: (open: boolean) => void;
 }) {
   const [workoutId, setWorkoutId] = useState("");
@@ -53,11 +104,59 @@ export function WorkoutEditor({
   const [customGroup, setCustomGroup] = useState("");
   const [ready, setReady] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [restByExercise, setRestByExercise] = useState<Record<string, number>>({});
+  const [timer, setTimer] = useState<{ exerciseName: string; endsAt: number; durationMs: number } | null>(null);
+  const [remainingMs, setRemainingMs] = useState(0);
+  const [timerNote, setTimerNote] = useState("");
+  const [prBanner, setPrBanner] = useState<string | null>(null);
   const exercisesRef = useRef(exercises);
+  const historyRef = useRef(history);
+  const prToken = useRef(0);
 
   useEffect(() => {
     exercisesRef.current = exercises;
   }, [exercises]);
+
+  useEffect(() => {
+    historyRef.current = history;
+  }, [history]);
+
+  const previousSessions = useMemo(
+    () => latestSessionsByExercise(history, workoutId || undefined),
+    [history, workoutId],
+  );
+
+  useEffect(() => {
+    if (open) return;
+    setTimer(null);
+    setPrBanner(null);
+    setTimerNote("");
+  }, [open]);
+
+  useEffect(() => {
+    if (!timer) return;
+    let cancelled = false;
+    const tick = window.setInterval(() => {
+      setRemainingMs(Math.max(0, timer.endsAt - Date.now()));
+    }, 200);
+    setRemainingMs(Math.max(0, timer.endsAt - Date.now()));
+    const remaining = Math.max(0, timer.endsAt - Date.now());
+    const finish = window.setTimeout(() => {
+      if (cancelled) return;
+      setTimerNote("Descanso acabou");
+      navigator.vibrate?.(200);
+    }, remaining);
+    const hide = window.setTimeout(() => {
+      if (cancelled) return;
+      setTimer((current) => (current?.endsAt === timer.endsAt ? null : current));
+    }, remaining + 1200);
+    return () => {
+      cancelled = true;
+      window.clearInterval(tick);
+      window.clearTimeout(finish);
+      window.clearTimeout(hide);
+    };
+  }, [timer]);
 
   useEffect(() => {
     if (!open) return;
@@ -215,13 +314,75 @@ export function WorkoutEditor({
     );
   }
 
-  function updateSetCompletion(itemId: string, setId: string, completed: boolean) {
+  function restSecondsFor(exerciseId: string) {
+    return restByExercise[exerciseId] ?? readRestSeconds(exerciseId);
+  }
+
+  function cycleRest(exerciseId: string) {
+    const next = nextRestPreset(restSecondsFor(exerciseId));
+    writeRestSeconds(exerciseId, next);
+    setRestByExercise((current) => ({ ...current, [exerciseId]: next }));
+  }
+
+  function startRest(exerciseName: string, seconds: number) {
+    const durationMs = seconds * 1000;
+    setTimer({ exerciseName, endsAt: Date.now() + durationMs, durationMs });
+    setRemainingMs(durationMs);
+    setTimerNote(`Descanso de ${seconds} segundos`);
+  }
+
+  function extendRest() {
+    setTimerNote("Mais 30 segundos de descanso");
+    setTimer((current) =>
+      current ? { ...current, endsAt: current.endsAt + 30_000, durationMs: current.durationMs + 30_000 } : current,
+    );
+  }
+
+  function showRecord(label: string) {
+    const token = prToken.current + 1;
+    prToken.current = token;
+    setPrBanner(label);
+    window.setTimeout(() => {
+      if (prToken.current === token) setPrBanner(null);
+    }, 2000);
+  }
+
+  function updateSetCompletion(item: WorkoutDraftExercise, setId: string, completed: boolean) {
+    const target = item.sets.find((set) => set.id === setId);
+    setItems((current) =>
+      current.map((entry) => {
+        if (entry.id !== item.id) return entry;
+        return {
+          ...entry,
+          sets: entry.sets.map((set) => (set.id === setId ? { ...set, completed } : set)),
+        };
+      }),
+    );
+    if (!completed || !target) return;
+    const hasEffort = (target.loadKg ?? 0) > 0 || (target.reps ?? 0) > 0;
+    if (!hasEffort) return;
+    const priorSets = completedSetsForExercise(historyRef.current, item.exerciseId, workoutId || undefined);
+    const record = recordBeatenBySet(target, priorSets);
+    if (record) {
+      showRecord(recordLabel(record));
+      navigator.vibrate?.([20, 40, 20]);
+    } else {
+      navigator.vibrate?.(12);
+    }
+    startRest(item.name, restSecondsFor(item.exerciseId));
+  }
+
+  function changeSetByStep(itemId: string, setId: string, field: "loadKg" | "reps", direction: -1 | 1, fallback: number | null) {
     setItems((current) =>
       current.map((item) => {
         if (item.id !== itemId) return item;
         return {
           ...item,
-          sets: item.sets.map((set) => (set.id === setId ? { ...set, completed } : set)),
+          sets: item.sets.map((set) => {
+            if (set.id !== setId) return set;
+            const next = field === "loadKg" ? stepLoad(set.loadKg, direction, fallback) : stepReps(set.reps, direction, fallback);
+            return { ...set, [field]: next };
+          }),
         };
       }),
     );
@@ -280,6 +441,31 @@ export function WorkoutEditor({
             </div>
           </div>
         </DialogHeader>
+        <p className="sr-only" aria-live="polite">{prBanner ?? timerNote}</p>
+        {prBanner ? (
+          <div className="border-b border-amber-400/30 bg-amber-400/15 px-4 py-2 text-center font-mono text-sm font-bold text-amber-700 dark:text-amber-200">
+            {prBanner}
+          </div>
+        ) : null}
+        {timer ? (
+          <div className="border-b border-primary/20 bg-primary/10 px-4 py-3 sm:px-6">
+            <div className="flex items-center gap-3">
+              <Timer className="size-4 shrink-0 text-primary" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs text-muted-foreground">Descanso · {timer.exerciseName}</p>
+                <p className="font-mono text-3xl font-semibold tabular-nums tracking-tight" aria-hidden="true">{formatClock(remainingMs)}</p>
+              </div>
+              <Button type="button" variant="secondary" className="h-11 px-3" onClick={extendRest}>+30 s</Button>
+              <Button type="button" variant="ghost" className="h-11 px-3" onClick={() => setTimer(null)}>Pular</Button>
+            </div>
+            <div className="mt-2 h-1 overflow-hidden rounded-full bg-primary/15">
+              <div
+                className="h-full bg-primary transition-[width] duration-150"
+                style={{ width: `${timer.durationMs === 0 ? 0 : Math.min(100, (remainingMs / timer.durationMs) * 100)}%` }}
+              />
+            </div>
+          </div>
+        ) : null}
 
         <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
           {!ready ? (
@@ -297,28 +483,62 @@ export function WorkoutEditor({
                     <div className="min-w-0 flex-1">
                       <h3 className="truncate font-semibold">{item.name}</h3>
                       <p className="text-xs text-muted-foreground">{item.sets.filter((set) => set.completed).length}/{item.sets.length} séries concluídas</p>
+                      {previousSessions.get(item.exerciseId) ? (
+                        <p className="truncate text-xs text-muted-foreground">
+                          Última vez · {shortDate(previousSessions.get(item.exerciseId)!.date)} · {formatPreviousSets(previousSessions.get(item.exerciseId)!.sets)}
+                        </p>
+                      ) : null}
                     </div>
+                    <Button type="button" variant="ghost" size="sm" className="h-9 shrink-0 px-2 text-muted-foreground" aria-label={`Descanso de ${restSecondsFor(item.exerciseId)} segundos. Toque para alterar.`} onClick={() => cycleRest(item.exerciseId)}>
+                      {restSecondsFor(item.exerciseId)} s
+                    </Button>
                     <Button variant="ghost" size="icon-sm" aria-label="Mover exercício para cima" disabled={itemIndex === 0} onClick={() => moveItem(itemIndex, -1)}><ArrowUp /></Button>
                     <Button variant="ghost" size="icon-sm" aria-label="Mover exercício para baixo" disabled={itemIndex === items.length - 1} onClick={() => moveItem(itemIndex, 1)}><ArrowDown /></Button>
                     <Button variant="ghost" size="icon-sm" aria-label="Remover exercício" className="text-muted-foreground hover:text-destructive" onClick={() => setItems((current) => current.filter((entry) => entry.id !== item.id))}><Trash2 /></Button>
                   </div>
                   <div className="px-3 py-2 sm:px-4">
-                    <div className="grid grid-cols-[36px_1fr_1fr_34px_34px] items-center gap-2 px-1 pb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                      <span>Série</span><span>Carga</span><span>Reps</span><span className="sr-only">Concluir</span><span className="sr-only">Ações</span>
+                    <div className="grid grid-cols-[32px_1fr_1fr_44px] items-end gap-2 px-1 pb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                      <span>Série</span><span>Carga</span><span>Reps</span><span className="sr-only">Concluir</span>
                     </div>
                     <div className="space-y-2">
-                      {item.sets.map((set, setIndex) => (
-                        <div key={set.id} className={`grid grid-cols-[36px_1fr_1fr_34px_34px] items-center gap-2 rounded-xl p-1 transition ${set.completed ? "bg-emerald-400/8" : "bg-secondary/35"}`}>
-                          <span className="text-center font-mono text-sm text-muted-foreground">{setIndex + 1}</span>
-                          <Input aria-label={`Carga da série ${setIndex + 1}`} inputMode="decimal" type="number" min="0" step="0.5" value={set.loadKg ?? ""} onChange={(event) => updateSetValue(item.id, set.id, "loadKg", event.target.value)} className="h-10 bg-background/60 px-2" placeholder="0" />
-                          <Input aria-label={`Repetições da série ${setIndex + 1}`} inputMode="numeric" type="number" min="0" value={set.reps ?? ""} onChange={(event) => updateSetValue(item.id, set.id, "reps", event.target.value)} className="h-10 bg-background/60 px-2" placeholder="10" />
-                          <Checkbox aria-label={`Marcar série ${setIndex + 1} como concluída`} checked={set.completed} onCheckedChange={(checked) => updateSetCompletion(item.id, set.id, checked === true)} className="size-6 rounded-lg data-[state=checked]:border-emerald-400 data-[state=checked]:bg-emerald-400" />
-                          <Button variant="ghost" size="icon-sm" aria-label={`Duplicar série ${setIndex + 1}`} onClick={() => duplicateSet(item.id, set.id)}><Copy /></Button>
-                        </div>
-                      ))}
+                      {item.sets.map((set, setIndex) => {
+                        const previousSet = previousSessions.get(item.exerciseId)?.sets[setIndex];
+                        return (
+                          <div
+                            key={set.id}
+                            className={`rounded-xl p-1 transition duration-150 ${set.completed ? "bg-emerald-400/10" : "bg-secondary/35"}`}
+                            onClick={() => updateSetCompletion(item, set.id, !set.completed)}
+                          >
+                            <div className="grid grid-cols-[32px_1fr_1fr_44px] items-center gap-2">
+                              <div className="text-center">
+                                <span className="font-mono text-sm text-muted-foreground">{setIndex + 1}</span>
+                                <Button type="button" variant="ghost" size="icon-sm" className="mt-1 text-muted-foreground" aria-label={`Duplicar série ${setIndex + 1}`} onClick={(event) => { event.stopPropagation(); duplicateSet(item.id, set.id); }}><Copy /></Button>
+                              </div>
+                              <div className="space-y-1" onClick={(event) => event.stopPropagation()} onPointerDown={(event) => event.stopPropagation()}>
+                                <Input aria-label={`Carga da série ${setIndex + 1}`} inputMode="decimal" type="number" min="0" step="2.5" value={set.loadKg ?? ""} onChange={(event) => updateSetValue(item.id, set.id, "loadKg", event.target.value)} className="h-11 bg-background/70 px-2 text-center font-mono text-lg" placeholder={previousSet ? formatLoadKg(previousSet.loadKg) : "0"} />
+                                <div className="grid grid-cols-2 gap-1">
+                                  <Button type="button" variant="outline" className="h-9" aria-label={`Diminuir carga da série ${setIndex + 1}`} onClick={() => changeSetByStep(item.id, set.id, "loadKg", -1, previousSet?.loadKg ?? null)}><Minus /></Button>
+                                  <Button type="button" variant="outline" className="h-9" aria-label={`Aumentar carga da série ${setIndex + 1}`} onClick={() => changeSetByStep(item.id, set.id, "loadKg", 1, previousSet?.loadKg ?? null)}><Plus /></Button>
+                                </div>
+                              </div>
+                              <div className="space-y-1" onClick={(event) => event.stopPropagation()} onPointerDown={(event) => event.stopPropagation()}>
+                                <Input aria-label={`Repetições da série ${setIndex + 1}`} inputMode="numeric" type="number" min="0" step="1" value={set.reps ?? ""} onChange={(event) => updateSetValue(item.id, set.id, "reps", event.target.value)} className="h-11 bg-background/70 px-2 text-center font-mono text-lg" placeholder={previousSet ? String(previousSet.reps) : "10"} />
+                                <div className="grid grid-cols-2 gap-1">
+                                  <Button type="button" variant="outline" className="h-9" aria-label={`Diminuir repetições da série ${setIndex + 1}`} onClick={() => changeSetByStep(item.id, set.id, "reps", -1, previousSet?.reps ?? null)}><Minus /></Button>
+                                  <Button type="button" variant="outline" className="h-9" aria-label={`Aumentar repetições da série ${setIndex + 1}`} onClick={() => changeSetByStep(item.id, set.id, "reps", 1, previousSet?.reps ?? null)}><Plus /></Button>
+                                </div>
+                              </div>
+                              <div className="flex h-full items-center justify-center" onClick={(event) => event.stopPropagation()} onPointerDown={(event) => event.stopPropagation()}>
+                                <Checkbox aria-label={`Marcar série ${setIndex + 1} como concluída`} checked={set.completed} onCheckedChange={(checked) => updateSetCompletion(item, set.id, checked === true)} className="size-7 rounded-lg data-[state=checked]:border-emerald-400 data-[state=checked]:bg-emerald-400" />
+                              </div>
+                            </div>
+                            {previousSet ? <p className="px-1 pt-1 text-xs text-muted-foreground">Última · {formatSetSnapshot(previousSet)}</p> : null}
+                          </div>
+                        );
+                      })}
                     </div>
-                    <Button variant="ghost" size="sm" className="mt-2 w-full text-primary" onClick={() => setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, sets: [...entry.sets, newSet(entry.sets.at(-1)?.loadKg ?? null, entry.sets.at(-1)?.reps ?? null)] } : entry))}>
-                      <Plus /> Adicionar série
+                    <Button variant="ghost" size="sm" className="mt-2 h-11 w-full text-primary" onClick={() => setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, sets: [...entry.sets, newSet(entry.sets.at(-1)?.loadKg ?? null, entry.sets.at(-1)?.reps ?? null)] } : entry))}>
+                      <Plus /> série
                     </Button>
                   </div>
                 </section>
