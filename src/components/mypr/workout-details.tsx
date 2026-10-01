@@ -15,12 +15,14 @@ export function WorkoutDetails({
   onClose,
   onEdit,
   onRepeat,
+  onOpenExercise,
 }: {
   workoutId?: string;
   exercises: Exercise[];
   onClose: () => void;
   onEdit: (id: string) => void;
   onRepeat: (id: string) => void;
+  onOpenExercise?: (exerciseId: string) => void;
 }) {
   const [bundle, setBundle] = useState<WorkoutBundle>();
 
@@ -46,7 +48,9 @@ export function WorkoutDetails({
               return (
                 <section key={link.id} className="rounded-2xl border border-border/70 bg-card/60 p-4">
                   <div className="flex items-center justify-between gap-3">
-                    <h3 className="font-semibold">{exerciseMap.get(link.exerciseId) ?? "Exercício"}</h3>
+                    <button type="button" className="text-left font-heading text-xl" onClick={() => onOpenExercise?.(link.exerciseId)}>
+                      {exerciseMap.get(link.exerciseId) ?? "Exercício"}
+                    </button>
                     <MarkCheck className="size-4 text-record" />
                   </div>
                   <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-muted-foreground">

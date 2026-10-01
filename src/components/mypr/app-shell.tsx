@@ -11,6 +11,7 @@ import { AnalyticsView } from "@/components/mypr/analytics-view";
 import { ProfileView } from "@/components/mypr/profile-view";
 import { WorkoutEditor } from "@/components/mypr/workout-editor";
 import { WorkoutDetails } from "@/components/mypr/workout-details";
+import { ExercisePage } from "@/components/mypr/exercise-page";
 import { PwaRegister } from "@/components/mypr/pwa-register";
 import { useMyPrData } from "@/hooks/use-mypr-data";
 import { db, getStoredActiveProfileId, getStoredTheme, setStoredActiveProfileId } from "@/lib/db";
@@ -32,6 +33,7 @@ export function AppShell() {
   const [view, setView] = useState<View>("home");
   const [editor, setEditor] = useState<EditorState>({ open: false });
   const [detailsId, setDetailsId] = useState<string>();
+  const [exerciseFocus, setExerciseFocus] = useState<{ id: string; from: View } | null>(null);
   const [quickAddExercise, setQuickAddExercise] = useState(false);
   const activeLabel = navigation.find((item) => item.id === view)?.label;
   const hasHistory = Boolean(data && data.summaries.some((workout) => workout.status === "completed"));
@@ -86,11 +88,23 @@ export function AppShell() {
 
   const content = useMemo(() => {
     if (!data) return null;
+    if (exerciseFocus) {
+      return (
+        <ExercisePage
+          exerciseId={exerciseFocus.id}
+          exercises={data.exercises}
+          workouts={data.workouts}
+          workoutExercises={data.workoutExercises}
+          sets={data.sets}
+          onBack={() => setExerciseFocus(null)}
+        />
+      );
+    }
     if (view === "history") {
       return <WorkoutsView summaries={data.summaries} records={data.records} onStartWorkout={() => openEditor()} onOpenWorkout={setDetailsId} onRepeatWorkout={(workoutId) => openEditor({ workoutId, repeat: true })} />;
     }
     if (view === "analytics") {
-      return <AnalyticsView exercises={data.exercises} workouts={data.workouts} workoutExercises={data.workoutExercises} sets={data.sets} summaries={data.summaries} records={data.records} onBack={() => setView("you")} />;
+      return <AnalyticsView exercises={data.exercises} workouts={data.workouts} workoutExercises={data.workoutExercises} sets={data.sets} summaries={data.summaries} records={data.records} onBack={() => setView("you")} onOpenExercise={(id) => setExerciseFocus({ id, from: view })} />;
     }
     if (view === "you") {
       return <ProfileView exercises={data.exercises} pendingSync={data.pendingSync} quickAdd={quickAddExercise} onQuickAddConsumed={() => setQuickAddExercise(false)} onOpenAnalytics={() => setView("analytics")} templates={data.templates} />;
@@ -108,7 +122,7 @@ export function AppShell() {
         onStartRoutine={(templateId) => openEditor({ templateId })}
       />
     );
-  }, [data, quickAddExercise, view]);
+  }, [data, exerciseFocus, quickAddExercise, view]);
 
   if (!data || !profiles) {
     return (
@@ -170,7 +184,7 @@ export function AppShell() {
       {data ? (
         <>
           <WorkoutEditor open={editor.open} source={{ workoutId: editor.workoutId, repeat: editor.repeat, templateId: editor.templateId }} exercises={data.exercises} templates={data.templates} history={{ workouts: data.workouts, workoutExercises: data.workoutExercises, sets: data.sets }} onOpenChange={(open) => setEditor((current) => ({ ...current, open }))} />
-          <WorkoutDetails workoutId={detailsId} exercises={data.exercises} onClose={() => setDetailsId(undefined)} onEdit={(workoutId) => openEditor({ workoutId })} onRepeat={(workoutId) => openEditor({ workoutId, repeat: true })} />
+          <WorkoutDetails workoutId={detailsId} exercises={data.exercises} onClose={() => setDetailsId(undefined)} onEdit={(workoutId) => openEditor({ workoutId })} onRepeat={(workoutId) => openEditor({ workoutId, repeat: true })} onOpenExercise={(id) => { setDetailsId(undefined); setExerciseFocus({ id, from: view }); }} />
         </>
       ) : null}
       <Toaster richColors position="top-center" />

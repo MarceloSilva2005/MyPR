@@ -29,6 +29,7 @@ export function AnalyticsView({
   summaries,
   records,
   onBack,
+  onOpenExercise,
 }: {
   exercises: Exercise[];
   workouts: Workout[];
@@ -37,6 +38,7 @@ export function AnalyticsView({
   summaries: WorkoutSummary[];
   records: PersonalRecord[];
   onBack?: () => void;
+  onOpenExercise?: (exerciseId: string) => void;
 }) {
   const available = exercises.filter((exercise) =>
     workoutExercises.some((link) => link.exerciseId === exercise.id),
@@ -86,12 +88,17 @@ export function AnalyticsView({
                 <CardTitle className="text-base">Desempenho por exercício</CardTitle>
                 <p className="mt-1 text-xs text-muted-foreground">Somente séries concluídas entram nos cálculos</p>
               </div>
-              <Select value={selectedExercise} onValueChange={setSelectedExercise}>
-                <SelectTrigger className="h-10 w-44 bg-background sm:w-56"><SelectValue placeholder="Exercício" /></SelectTrigger>
-                <SelectContent>
-                  {available.map((exercise) => <SelectItem key={exercise.id} value={exercise.id}>{exercise.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-2">
+                {onOpenExercise && selectedExercise ? (
+                  <button type="button" className="text-sm text-primary" onClick={() => onOpenExercise(selectedExercise)}>Página</button>
+                ) : null}
+                <Select value={selectedExercise} onValueChange={setSelectedExercise}>
+                  <SelectTrigger className="h-10 w-44 bg-background sm:w-56"><SelectValue placeholder="Exercício" /></SelectTrigger>
+                  <SelectContent>
+                    {available.map((exercise) => <SelectItem key={exercise.id} value={exercise.id}>{exercise.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </CardHeader>
             <CardContent>
               <ChartContainer config={loadConfig} className="h-64 w-full aspect-auto">
