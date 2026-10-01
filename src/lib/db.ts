@@ -12,6 +12,7 @@ import type {
   WorkoutTemplate,
 } from "@/lib/domain";
 import { backupSchema, exerciseInputSchema, profileInputSchema } from "@/lib/validation";
+import { parseLogCsv } from "@/lib/csv-log";
 
 export const ACTIVE_PROFILE_STORAGE_KEY = "mypr-active-profile-id";
 export const THEME_STORAGE_KEY = "mypr-theme";
@@ -431,6 +432,74 @@ export async function restoreLocalData(payload: unknown) {
       if (data.templates?.length) await db.templates.bulkPut(data.templates);
     },
   );
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export async function importCsvLog(text: string) {
+  const rows = parseLogCsv(text);
+  if (rows.length === 0) throw new Error("O CSV não tem séries.");
+  const now = new Date().toISOString();
+  const known = new Set((await db.exercises.toArray()).map((exercise) => exercise.id));
+  for (const row of rows) {
+    if (!UUID_PATTERN.test(row.exerciseId)) row.exerciseId = crypto.randomUUID();
+    if (known.has(row.exerciseId)) continue;
+    await db.exercises.put({
+      id: row.exerciseId,
+      name: row.exerciseName,
+      source: "custom",
+      createdAt: now,
+      updatedAt: now,
+    });
+    known.add(row.exerciseId);
+  }
+
+  const byWorkout = new Map<string, typeof rows>();
+  for (const row of rows) {
+    const bucket = byWorkout.get(row.workoutId) ?? [];
+    bucket.push(row);
+    byWorkout.set(row.workoutId, bucket);
+  }
+
+  for (const [workoutId, list] of byWorkout) {
+    const id = UUID_PATTERN.test(workoutId) ? workoutId : crypto.randomUUID();
+    const first = list[0];
+    if (!first) continue;
+    const exerciseOrder: string[] = [];
+    for (const row of list) {
+      if (!exerciseOrder.includes(row.exerciseId)) exerciseOrder.push(row.exerciseId);
+    }
+    const links = exerciseOrder.map((exerciseId, order) => ({
+      id: crypto.randomUUID(),
+      workoutId: id,
+      exerciseId,
+      order,
+      createdAt: now,
+      updatedAt: now,
+    }));
+    const linkByExercise = new Map(links.map((link) => [link.exerciseId, link.id]));
+    await saveWorkoutBundle({
+      workout: {
+        id,
+        performedAt: first.performedAt,
+        status: first.status,
+        routineName: first.routineName,
+        createdAt: now,
+        updatedAt: now,
+      },
+      exercises: links,
+      sets: list.map((row) => ({
+        id: crypto.randomUUID(),
+        workoutExerciseId: linkByExercise.get(row.exerciseId) ?? links[0]?.id ?? crypto.randomUUID(),
+        order: Math.max(0, row.setOrder - 1),
+        reps: row.reps,
+        loadKg: row.loadKg,
+        completed: row.completed,
+        createdAt: now,
+        updatedAt: now,
+      })),
+    });
+  }
 }
 
 export async function exportLocalData() {

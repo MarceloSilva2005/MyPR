@@ -29,7 +29,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { Exercise, WorkoutTemplate } from "@/lib/domain";
 import { routineDayLabel } from "@/lib/workout-templates";
-import { archiveExercise, exportLocalData, getStoredActiveProfileId, listProfiles, resetLocalData, restoreLocalData, saveExercise, saveProfile, setStoredActiveProfileId, setStoredTheme } from "@/lib/db";
+import { archiveExercise, exportLocalData, getStoredActiveProfileId, importCsvLog, listProfiles, resetLocalData, restoreLocalData, saveExercise, saveProfile, setStoredActiveProfileId, setStoredTheme } from "@/lib/db";
+import { logToCsv } from "@/lib/csv-log";
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase";
 import { syncNow } from "@/lib/sync-service";
 
@@ -232,7 +233,19 @@ export function ProfileView({
     link.download = `mypr-backup-${new Date().toISOString().slice(0, 10)}.json`;
     link.click();
     URL.revokeObjectURL(url);
-    toast.success("Backup exportado");
+    toast.success("JSON exportado");
+  }
+
+  async function downloadCsv() {
+    const data = await exportLocalData();
+    const csv = logToCsv({ workouts: data.workouts, workoutExercises: data.workoutExercises, sets: data.setEntries, exercises: data.exercises });
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `mypr-treinos-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success("CSV exportado");
   }
 
   async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
@@ -247,9 +260,13 @@ export function ProfileView({
     try {
       setImporting(true);
       const text = await file.text();
-      const json = JSON.parse(text) as Record<string, unknown>;
-      await restoreLocalData(json);
-      toast.success("Backup restaurado", { description: "Seu histórico foi carregado com sucesso." });
+      if (text.trim().startsWith("{")) {
+        await restoreLocalData(JSON.parse(text) as Record<string, unknown>);
+        toast.success("JSON restaurado", { description: "Seu histórico foi carregado." });
+      } else {
+        await importCsvLog(text);
+        toast.success("CSV restaurado", { description: "As séries do backup entraram no histórico." });
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Arquivo inválido para restauração.");
     } finally {
@@ -401,11 +418,12 @@ export function ProfileView({
                   </DialogContent>
                 </Dialog>
               )}
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <Button variant="outline" onClick={downloadData}><MarkDownload /> Exportar backup</Button>
-                <Button variant="outline" onClick={() => importInputRef.current?.click()} disabled={importing}>{importing ? "Importando…" : "Importar backup"}</Button>
+              <div className="grid grid-cols-1 gap-2">
+                <Button variant="outline" onClick={() => void downloadData()}><MarkDownload /> Exportar JSON</Button>
+                <Button variant="outline" onClick={() => void downloadCsv()}><MarkDownload /> Exportar CSV</Button>
+                <Button variant="outline" onClick={() => importInputRef.current?.click()} disabled={importing}>{importing ? "Importando…" : "Restaurar JSON ou CSV"}</Button>
               </div>
-              <input ref={importInputRef} type="file" accept="application/json" className="hidden" onChange={handleImport} />
+              <input ref={importInputRef} type="file" accept="application/json,text/csv,.csv" className="hidden" onChange={handleImport} />
             </CardContent>
           </Card>
 
