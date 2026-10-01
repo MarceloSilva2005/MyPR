@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Activity, CalendarCheck2, Dumbbell, Repeat2, Trophy } from "lucide-react";
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { MarkBar, MarkLedger, MarkRecord, MarkRepeat, MarkTrend } from "@/components/mypr/icons";
+import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,12 +13,12 @@ import { MetricCard } from "@/components/mypr/metric-card";
 import { EmptyState } from "@/components/mypr/empty-state";
 
 const loadConfig = {
-  maxLoadKg: { label: "Carga máxima", color: "#2f83ff" },
-  estimated1rmKg: { label: "1RM estimado", color: "#7bb3ff" },
+  maxLoadKg: { label: "Carga máxima", color: "#E26A45" },
+  estimated1rmKg: { label: "1RM estimado", color: "#C4B49F" },
 } satisfies ChartConfig;
 
 const volumeConfig = {
-  volumeKg: { label: "Volume", color: "#2f83ff" },
+  volumeKg: { label: "Volume", color: "#1F6B4A" },
 } satisfies ChartConfig;
 
 export function AnalyticsView({
@@ -28,6 +28,7 @@ export function AnalyticsView({
   sets,
   summaries,
   records,
+  onBack,
 }: {
   exercises: Exercise[];
   workouts: Workout[];
@@ -35,12 +36,14 @@ export function AnalyticsView({
   sets: SetEntry[];
   summaries: WorkoutSummary[];
   records: PersonalRecord[];
+  onBack?: () => void;
 }) {
   const available = exercises.filter((exercise) =>
     workoutExercises.some((link) => link.exerciseId === exercise.id),
   );
   const [selectedExercise, setSelectedExercise] = useState(available[0]?.id ?? "");
   const [period, setPeriod] = useState<"week" | "month">("week");
+  const [showVolume, setShowVolume] = useState(false);
   const periods = useMemo(() => comparisonPeriods(summaries), [summaries]);
   const metrics = periods[period];
   const trend = useMemo(
@@ -54,8 +57,9 @@ export function AnalyticsView({
     <div className="space-y-6 pb-5">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm text-muted-foreground">Veja o que mudou, não apenas o que treinou</p>
+          <p className="mypr-kicker">Carga e 1RM</p>
           <h1 className="mt-1 text-3xl font-bold tracking-tight">Evolução</h1>
+          {onBack ? <button type="button" className="mt-2 text-sm text-primary" onClick={onBack}>Voltar para Você</button> : null}
         </div>
         <Tabs value={period} onValueChange={(value) => setPeriod(value as typeof period)}>
           <TabsList>
@@ -66,14 +70,14 @@ export function AnalyticsView({
       </header>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Treinos" value={metrics.current.workouts} icon={Dumbbell} change={percentChange(metrics.current.workouts, metrics.previous.workouts)} />
-        <MetricCard label="Volume total" value={metrics.current.volumeKg.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} suffix="kg" icon={Activity} change={percentChange(metrics.current.volumeKg, metrics.previous.volumeKg)} />
-        <MetricCard label="Séries" value={metrics.current.sets} icon={Repeat2} change={percentChange(metrics.current.sets, metrics.previous.sets)} />
-        <MetricCard label="Repetições" value={metrics.current.reps} icon={CalendarCheck2} change={percentChange(metrics.current.reps, metrics.previous.reps)} />
+        <MetricCard label="Treinos" value={metrics.current.workouts} icon={MarkBar} change={percentChange(metrics.current.workouts, metrics.previous.workouts)} />
+        <MetricCard label="Volume total" value={metrics.current.volumeKg.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} suffix="kg" icon={MarkTrend} change={percentChange(metrics.current.volumeKg, metrics.previous.volumeKg)} />
+        <MetricCard label="Séries" value={metrics.current.sets} icon={MarkRepeat} change={percentChange(metrics.current.sets, metrics.previous.sets)} />
+        <MetricCard label="Repetições" value={metrics.current.reps} icon={MarkLedger} change={percentChange(metrics.current.reps, metrics.previous.reps)} />
       </div>
 
       {available.length === 0 ? (
-        <EmptyState icon={Activity} title="Ainda não há evolução para mostrar" description="Finalize um treino para gerar gráficos, comparações e recordes." />
+        <EmptyState icon={MarkTrend} title="Ainda não há evolução para mostrar" description="Finalize um treino para gerar gráficos, comparações e recordes." />
       ) : (
         <>
           <Card className="border-border/70 bg-card/70 shadow-none">
@@ -91,23 +95,26 @@ export function AnalyticsView({
             </CardHeader>
             <CardContent>
               <ChartContainer config={loadConfig} className="h-64 w-full aspect-auto">
-                <AreaChart data={trend} margin={{ left: -14, right: 8, top: 16 }}>
-                  <defs>
-                    <linearGradient id="loadFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--color-maxLoadKg)" stopOpacity={0.38} /><stop offset="100%" stopColor="var(--color-maxLoadKg)" stopOpacity={0.02} /></linearGradient>
-                  </defs>
+                <LineChart data={trend} margin={{ left: -14, right: 8, top: 16 }}>
                   <CartesianGrid vertical={false} strokeDasharray="4 4" />
                   <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={10} />
-                  <YAxis tickLine={false} axisLine={false} tickFormatter={(value) => `${value} kg`} width={48} />
+                  <YAxis tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} width={48} />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Area type="monotone" dataKey="estimated1rmKg" stroke="var(--color-estimated1rmKg)" fill="transparent" strokeDasharray="4 4" strokeWidth={2} />
-                  <Area type="monotone" dataKey="maxLoadKg" stroke="var(--color-maxLoadKg)" fill="url(#loadFill)" strokeWidth={2.5} />
-                </AreaChart>
+                  <Line type="monotone" dataKey="estimated1rmKg" stroke="var(--color-estimated1rmKg)" strokeDasharray="4 4" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="maxLoadKg" stroke="var(--color-maxLoadKg)" strokeWidth={2.5} dot={false} />
+                </LineChart>
               </ChartContainer>
             </CardContent>
           </Card>
 
+          <div className="flex justify-end">
+            <button type="button" className="text-sm text-primary" onClick={() => setShowVolume((current) => !current)}>
+              {showVolume ? "Ocultar volume" : "Mostrar volume"}
+            </button>
+          </div>
+
           <div className="grid gap-5 lg:grid-cols-[1.3fr_.7fr]">
-            <Card className="border-border/70 bg-card/70 shadow-none">
+            {showVolume ? <Card className="border-border bg-card shadow-none">
               <CardHeader><CardTitle className="text-base">Volume por sessão</CardTitle></CardHeader>
               <CardContent>
                 <ChartContainer config={volumeConfig} className="h-56 w-full aspect-auto">
@@ -120,18 +127,18 @@ export function AnalyticsView({
                   </BarChart>
                 </ChartContainer>
               </CardContent>
-            </Card>
+            </Card> : null}
 
-            <Card className="border-amber-400/20 bg-[linear-gradient(145deg,rgba(245,158,11,.1),rgba(16,27,49,.7))] shadow-none">
+            <Card className="border-record/40 bg-card shadow-none">
               <CardHeader>
-                <span className="mb-1 grid size-10 place-items-center rounded-xl bg-amber-400/15 text-amber-300"><Trophy className="size-5" /></span>
+                <MarkRecord className="mb-2 size-5 text-record" />
                 <CardTitle className="text-base">Recordes · {selected?.name}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {selectedRecords.map((record) => (
                   <div key={`${record.kind}-${record.date}`} className="flex items-center justify-between rounded-xl bg-background/35 p-3">
                     <span className="text-sm text-muted-foreground">{record.kind === "load" ? "Maior carga" : record.kind === "estimated1rm" ? "1RM estimado" : "Maior volume"}</span>
-                    <span className="font-mono font-bold text-amber-300">{record.value.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} {record.unit}</span>
+                    <span className="mypr-num font-bold text-record">{record.value.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} {record.unit}</span>
                   </div>
                 ))}
               </CardContent>

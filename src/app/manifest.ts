@@ -7,9 +7,18 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Registre séries, acompanhe volume e conquiste novos recordes pessoais.",
     start_url: "/",
     display: "standalone",
-    background_color: "#07101e",
-    theme_color: "#07101e",
+    background_color: "#1A1613",
+    theme_color: "#1A1613",
     orientation: "portrait-primary",
     icons: [{ src: "/favicon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" }],
+    shortcuts: [
+      {
+        name: "Começar treino",
+        short_name: "Treinar",
+        description: "Abrir o registro de treino",
+        url: "/?treino=1",
+        icons: [{ src: "/favicon.svg", sizes: "any", type: "image/svg+xml" }],
+      },
+    ],
   };
 }

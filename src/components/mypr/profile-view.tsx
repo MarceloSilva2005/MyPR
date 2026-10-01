@@ -4,19 +4,19 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import type { User } from "@supabase/supabase-js";
 import {
-  Archive,
-  Cloud,
-  Database,
-  Download,
-  LogIn,
-  Mail,
-  Moon,
-  Plus,
-  RefreshCw,
-  Search,
-  ShieldCheck,
-  UserRound,
-} from "lucide-react";
+  MarkArchive,
+  MarkBar,
+  MarkCloud,
+  MarkDownload,
+  MarkEnter,
+  MarkMail,
+  MarkMoon,
+  MarkPlus,
+  MarkRefresh,
+  MarkSearch,
+  MarkShield,
+  MarkYou,
+} from "@/components/mypr/icons";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,11 +37,13 @@ export function ProfileView({
   pendingSync,
   quickAdd = false,
   onQuickAddConsumed,
+  onOpenAnalytics,
 }: {
   exercises: Exercise[];
   pendingSync: number;
   quickAdd?: boolean;
   onQuickAddConsumed?: () => void;
+  onOpenAnalytics?: () => void;
 }) {
   const [dark, setDark] = useState(true);
   const [search, setSearch] = useState("");
@@ -256,40 +258,38 @@ export function ProfileView({
   return (
     <div className="space-y-6 pb-5">
       <header>
-        <p className="text-sm text-muted-foreground">Conta, exercícios e preferências</p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight">Perfil</h1>
+        <p className="mypr-kicker">Conta e aparelho</p>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight">Você</h1>
       </header>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Card className="border-border/70 bg-card/70 shadow-none">
-          <CardContent className="p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Exercícios</p>
-            <p className="mt-3 text-3xl font-bold">{stats.active}</p>
-            <p className="mt-1 text-xs text-muted-foreground">ativos no catálogo</p>
-          </CardContent>
-        </Card>
-        <Card className="border-border/70 bg-card/70 shadow-none">
-          <CardContent className="p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Arquivados</p>
-            <p className="mt-3 text-3xl font-bold">{stats.archived}</p>
-            <p className="mt-1 text-xs text-muted-foreground">mantidos no histórico</p>
-          </CardContent>
-        </Card>
-        <Card className="border-border/70 bg-card/70 shadow-none">
-          <CardContent className="p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Pendentes</p>
-            <p className="mt-3 text-3xl font-bold">{stats.pendingSync}</p>
-            <p className="mt-1 text-xs text-muted-foreground">alterações locais</p>
-          </CardContent>
-        </Card>
-      </div>
+      {onOpenAnalytics ? (
+        <Button variant="outline" className="h-12 w-full justify-between" onClick={onOpenAnalytics}>
+          Evolução
+          <span className="text-xs text-muted-foreground">Carga e 1RM</span>
+        </Button>
+      ) : null}
+
+      <dl className="grid grid-cols-3 border-y border-foreground">
+        <div className="py-4 pr-3">
+          <dt className="mypr-kicker">Exercícios</dt>
+          <dd className="mypr-num mt-2 text-3xl">{stats.active}</dd>
+        </div>
+        <div className="border-l border-border px-3 py-4">
+          <dt className="mypr-kicker">Arquivados</dt>
+          <dd className="mypr-num mt-2 text-3xl">{stats.archived}</dd>
+        </div>
+        <div className="border-l border-border px-3 py-4">
+          <dt className="mypr-kicker">Pendentes</dt>
+          <dd className="mypr-num mt-2 text-3xl">{stats.pendingSync}</dd>
+        </div>
+      </dl>
 
       <div className="grid gap-5 lg:grid-cols-[.8fr_1.2fr]">
         <div className="space-y-5">
           <Card className="border-border/70 bg-card/70 shadow-none">
             <CardContent className="flex items-center gap-4 p-5">
               <Avatar className="size-14 border border-primary/25 bg-primary/10">
-                <AvatarFallback className="bg-primary/10 text-primary"><UserRound className="size-6" /></AvatarFallback>
+                <AvatarFallback className="bg-secondary text-foreground"><MarkYou className="size-6" /></AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
                 <p className="font-semibold">{localProfile?.name ?? user?.user_metadata?.full_name ?? "Treine sem cadastro"}</p>
@@ -304,7 +304,7 @@ export function ProfileView({
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={() => setProfileDialog(true)}>Editar perfil</Button>
-                {user ? <Badge className="bg-emerald-400/15 text-emerald-300">Conectado</Badge> : null}
+                {user ? <Badge className="bg-record text-record-foreground">Conectado</Badge> : null}
               </div>
             </CardContent>
           </Card>
@@ -346,7 +346,7 @@ export function ProfileView({
             <CardHeader><CardTitle className="text-base">Backup e sincronização</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center gap-3 rounded-xl bg-secondary/45 p-3">
-                <span className="grid size-9 place-items-center rounded-xl bg-primary/10 text-primary"><Cloud className="size-4.5" /></span>
+                <MarkCloud className="size-5 text-primary" />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">{user ? "Conta conectada" : "Modo local"}</p>
                   <p className="text-xs text-muted-foreground">{pendingSync} alterações aguardando backup</p>
@@ -355,12 +355,12 @@ export function ProfileView({
               </div>
               {user ? (
                 <div className="grid grid-cols-2 gap-2">
-                  <Button onClick={handleSync} disabled={syncing}><RefreshCw className={syncing ? "animate-spin" : ""} /> Sincronizar</Button>
+                  <Button onClick={handleSync} disabled={syncing}><MarkRefresh className={syncing ? "animate-spin" : ""} /> Sincronizar</Button>
                   <Button variant="outline" onClick={() => void getSupabaseClient()?.auth.signOut()}>Sair</Button>
                 </div>
               ) : (
                 <Dialog open={authDialog} onOpenChange={setAuthDialog}>
-                  <DialogTrigger asChild><Button className="w-full"><LogIn /> Entrar para fazer backup</Button></DialogTrigger>
+                  <DialogTrigger asChild><Button className="w-full"><MarkEnter /> Entrar para fazer backup</Button></DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Conecte sua conta</DialogTitle>
@@ -368,11 +368,11 @@ export function ProfileView({
                     </DialogHeader>
                     {configured ? (
                       <div className="space-y-3">
-                        <Button variant="outline" className="w-full" onClick={signInGoogle}><ShieldCheck /> Continuar com Google</Button>
+                        <Button variant="outline" className="w-full" onClick={signInGoogle}><MarkShield /> Continuar com Google</Button>
                         <div className="flex items-center gap-3 text-xs text-muted-foreground"><span className="h-px flex-1 bg-border" />ou por e-mail<span className="h-px flex-1 bg-border" /></div>
                         <Label htmlFor="auth-email">E-mail</Label>
                         <Input id="auth-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="voce@email.com" />
-                        <Button className="w-full" onClick={signInEmail} disabled={!email.trim()}><Mail /> Enviar link de acesso</Button>
+                        <Button className="w-full" onClick={signInEmail} disabled={!email.trim()}><MarkMail /> Enviar link de acesso</Button>
                       </div>
                     ) : (
                       <div className="rounded-xl border border-amber-400/20 bg-amber-400/8 p-4 text-sm text-muted-foreground">
@@ -383,7 +383,7 @@ export function ProfileView({
                 </Dialog>
               )}
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <Button variant="outline" onClick={downloadData}><Download /> Exportar backup</Button>
+                <Button variant="outline" onClick={downloadData}><MarkDownload /> Exportar backup</Button>
                 <Button variant="outline" onClick={() => importInputRef.current?.click()} disabled={importing}>{importing ? "Importando…" : "Importar backup"}</Button>
               </div>
               <input ref={importInputRef} type="file" accept="application/json" className="hidden" onChange={handleImport} />
@@ -394,11 +394,11 @@ export function ProfileView({
             <CardHeader><CardTitle className="text-base">Preferências</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3"><Moon className="size-4 text-primary" /><div><p className="text-sm font-medium">Tema escuro</p><p className="text-xs text-muted-foreground">Melhor contraste durante o treino</p></div></div>
+                <div className="flex items-center gap-3"><MarkMoon className="size-4 text-primary" /><div><p className="text-sm font-medium">Tema escuro</p><p className="text-xs text-muted-foreground">Melhor contraste durante o treino</p></div></div>
                 <Switch checked={dark} onCheckedChange={toggleTheme} aria-label="Alternar tema escuro" />
               </div>
               <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3"><Database className="size-4 text-primary" /><div><p className="text-sm font-medium">Unidade de peso</p><p className="text-xs text-muted-foreground">Armazenamento canônico</p></div></div>
+                <div className="flex items-center gap-3"><MarkBar className="size-4 text-primary" /><div><p className="text-sm font-medium">Unidade de peso</p><p className="text-xs text-muted-foreground">Quilograma ou libra</p></div></div>
                 <Badge variant="secondary">kg</Badge>
               </div>
             </CardContent>
@@ -409,7 +409,7 @@ export function ProfileView({
           <CardHeader className="flex flex-row items-center justify-between gap-3">
             <div><CardTitle className="text-base">Catálogo de exercícios</CardTitle><p className="mt-1 text-xs text-muted-foreground">Arquivar preserva todo o histórico</p></div>
             <Dialog open={exerciseDialog} onOpenChange={setExerciseDialog}>
-              <DialogTrigger asChild><Button size="sm"><Plus /> Novo</Button></DialogTrigger>
+              <DialogTrigger asChild><Button size="sm"><MarkPlus /> Novo</Button></DialogTrigger>
               <DialogContent className="max-h-[90dvh] overflow-hidden">
                 <DialogHeader><DialogTitle>Novo exercício</DialogTitle><DialogDescription>Crie um exercício personalizado ou escolha um da base de musculação.</DialogDescription></DialogHeader>
                 <div className="space-y-4 overflow-y-auto pr-1">
@@ -454,13 +454,13 @@ export function ProfileView({
             </Dialog>
           </CardHeader>
           <CardContent>
-            <div className="relative mb-3"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar exercício" className="pl-9" /></div>
+            <div className="relative mb-3"><MarkSearch className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar exercício" className="pl-9" /></div>
             <div className="max-h-[520px] space-y-1 overflow-y-auto pr-1">
               {visibleExercises.map((exercise) => (
                 <div key={exercise.id} className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-secondary/45">
-                  <span className="grid size-9 place-items-center rounded-xl bg-secondary text-muted-foreground"><Database className="size-4" /></span>
+                  <MarkBar className="size-4 text-muted-foreground" />
                   <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{exercise.name}</p><p className="text-xs text-muted-foreground">{exercise.muscleGroup ?? "Sem grupo"} · {exercise.source === "default" ? "Padrão" : "Personalizado"}</p></div>
-                  <Button variant="ghost" size="icon-sm" aria-label={`Arquivar ${exercise.name}`} onClick={() => void archiveExercise(exercise.id)}><Archive /></Button>
+                  <Button variant="ghost" size="icon-sm" aria-label={`Arquivar ${exercise.name}`} onClick={() => void archiveExercise(exercise.id)}><MarkArchive /></Button>
                 </div>
               ))}
             </div>

@@ -1,16 +1,22 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Fraunces, IBM_Plex_Mono, Public_Sans } from "next/font/google";
 import type { ReactNode } from "react";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const display = Fraunces({
+  variable: "--font-display",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const sans = Public_Sans({
+  variable: "--font-sans-mypr",
   subsets: ["latin"],
+});
+
+const mono = IBM_Plex_Mono({
+  variable: "--font-mono-mypr",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
@@ -20,11 +26,16 @@ export const metadata: Metadata = {
   icons: { icon: "/favicon.svg" },
 };
 
+export const viewport: Viewport = {
+  themeColor: "#1A1613",
+  colorScheme: "dark",
+};
+
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html
       lang="pt-BR"
-      className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
+      className={`${display.variable} ${sans.variable} ${mono.variable} dark h-full antialiased`}
     >
       <body className="min-h-full">{children}</body>
     </html>

@@ -1,29 +1,31 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarDays, ChevronRight, Copy, Dumbbell, Filter, Plus } from "lucide-react";
+import { MarkPlus } from "@/components/mypr/icons";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { WorkoutSummary } from "@/lib/domain";
-import { currentWorkoutStreak, isWorkoutInMonth, parseWorkoutDate } from "@/lib/analytics";
+import type { PersonalRecord, WorkoutSummary } from "@/lib/domain";
+import { isWorkoutInMonth, parseWorkoutDate } from "@/lib/analytics";
 import { EmptyState } from "@/components/mypr/empty-state";
 
 export function WorkoutsView({
   summaries,
+  records,
   onStartWorkout,
   onOpenWorkout,
   onRepeatWorkout,
 }: {
   summaries: WorkoutSummary[];
+  records: PersonalRecord[];
   onStartWorkout: () => void;
   onOpenWorkout: (id: string) => void;
   onRepeatWorkout: (id: string) => void;
 }) {
   const [filter, setFilter] = useState<"all" | "month" | "draft">("all");
+  const recordDates = useMemo(() => new Set(records.map((record) => record.date)), [records]);
   const visible = useMemo(() => {
     const now = new Date();
     return summaries.filter((workout) => {
@@ -33,128 +35,84 @@ export function WorkoutsView({
     });
   }, [filter, summaries]);
 
-  const trainedDays = new Set(summaries.filter((workout) => workout.status === "completed").map((workout) => workout.performedAt));
-  const streak = useMemo(() => currentWorkoutStreak(summaries), [summaries]);
-  const monthVolume = useMemo(() => {
-    const now = new Date();
-    return summaries
-      .filter((workout) => workout.status === "completed")
-      .filter((workout) => isWorkoutInMonth(workout.performedAt, now))
-      .reduce((sum, workout) => sum + workout.volumeKg, 0);
-  }, [summaries]);
-  const bestVolume = useMemo(() => Math.max(0, ...summaries.filter((workout) => workout.status === "completed").map((workout) => workout.volumeKg)), [summaries]);
-  const calendarDays = Array.from({ length: 35 }, (_, index) => {
-    const now = new Date();
-    const first = new Date(now.getFullYear(), now.getMonth(), 1);
-    const offset = (first.getDay() + 6) % 7;
-    return new Date(now.getFullYear(), now.getMonth(), index - offset + 1);
-  });
-
   return (
     <div className="space-y-6 pb-5">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm text-muted-foreground">Sua consistência em um só lugar</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">Treinos</h1>
-        </div>
-        <Button onClick={onStartWorkout}><Plus /> <span className="hidden sm:inline">Novo treino</span></Button>
+      <header className="flex items-end justify-between gap-4">
+        <h1 className="text-3xl font-bold tracking-tight">Histórico</h1>
+        <Button onClick={onStartWorkout} className="h-11"><MarkPlus /> Novo</Button>
       </header>
 
-      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-3">
-        <Card className="border-border/70 bg-card/70 shadow-none">
-          <CardContent className="p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Sequência</p>
-            <p className="mt-3 text-2xl font-bold text-primary">{streak}d</p>
-            <p className="mt-1 text-xs text-muted-foreground">dias treinos seguidos</p>
-          </CardContent>
-        </Card>
-        <Card className="border-border/70 bg-card/70 shadow-none">
-          <CardContent className="p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Volume</p>
-            <p className="mt-3 text-2xl font-bold">{monthVolume.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} kg</p>
-            <p className="mt-1 text-xs text-muted-foreground">este mês</p>
-          </CardContent>
-        </Card>
-        <Card className="border-border/70 bg-card/70 shadow-none">
-          <CardContent className="p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Melhor dia</p>
-            <p className="mt-3 text-2xl font-bold">{bestVolume.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} kg</p>
-            <p className="mt-1 text-xs text-muted-foreground">maior volume em um treino</p>
-          </CardContent>
-        </Card>
-      </div>
+      <Tabs value={filter} onValueChange={(value) => setFilter(value as typeof filter)}>
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="all">Todos</TabsTrigger>
+          <TabsTrigger value="month">Este mês</TabsTrigger>
+          <TabsTrigger value="draft">Rascunhos</TabsTrigger>
+        </TabsList>
+      </Tabs>
 
-      <div className="grid gap-5 lg:grid-cols-[.8fr_1.4fr]">
-        <Card className="h-fit border-border/70 bg-card/70 shadow-none">
-          <CardContent className="p-4">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <p className="font-semibold capitalize">{format(new Date(), "MMMM yyyy", { locale: ptBR })}</p>
-                <p className="text-xs text-muted-foreground">{trainedDays.size} dias treinados no histórico</p>
-              </div>
-              <CalendarDays className="size-5 text-primary" />
-            </div>
-            <div className="grid grid-cols-7 gap-1 text-center">
-              {["S", "T", "Q", "Q", "S", "S", "D"].map((day, index) => <span key={`${day}-${index}`} className="py-1 text-[11px] text-muted-foreground">{day}</span>)}
-              {calendarDays.map((day) => {
-                const key = format(day, "yyyy-MM-dd");
-                const inMonth = day.getMonth() === new Date().getMonth();
-                const trained = trainedDays.has(key);
-                return (
-                  <span key={key} className={`grid aspect-square place-items-center rounded-lg text-xs ${trained ? "bg-primary font-semibold text-primary-foreground" : inMonth ? "bg-secondary/45" : "text-muted-foreground/35"}`}>
-                    {format(day, "d")}
-                  </span>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+      {visible.length === 0 ? (
+        <EmptyState icon={MarkPlus} title="Nenhum treino neste filtro" description="Registre um treino para ver a lista." actionLabel="Novo treino" onAction={onStartWorkout} />
+      ) : (
+        <div className="space-y-2">
+          {visible.map((workout) => (
+            <HistoryRow
+              key={workout.id}
+              workout={workout}
+              hasRecord={workout.status === "completed" && recordDates.has(workout.performedAt)}
+              onOpen={() => onOpenWorkout(workout.id)}
+              onRepeat={workout.status === "completed" ? () => onRepeatWorkout(workout.id) : undefined}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
-        <section aria-labelledby="history-title">
-          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 id="history-title" className="font-semibold">Histórico</h2>
-            <Tabs value={filter} onValueChange={(value) => setFilter(value as typeof filter)}>
-              <TabsList className="w-full sm:w-auto">
-                <TabsTrigger value="all">Todos</TabsTrigger>
-                <TabsTrigger value="month">Este mês</TabsTrigger>
-                <TabsTrigger value="draft">Rascunhos</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
+function HistoryRow({
+  workout,
+  hasRecord,
+  onOpen,
+  onRepeat,
+}: {
+  workout: WorkoutSummary;
+  hasRecord: boolean;
+  onOpen: () => void;
+  onRepeat?: () => void;
+}) {
+  const startX = useRef<number | null>(null);
+  const title = workout.routineName?.trim() || format(parseWorkoutDate(workout.performedAt), "d 'de' MMMM", { locale: ptBR });
 
-          {visible.length === 0 ? (
-            <EmptyState icon={Filter} title="Nenhum treino neste filtro" description="Altere o período ou registre um novo treino." actionLabel="Novo treino" onAction={onStartWorkout} />
-          ) : (
-            <div className="space-y-2">
-              {visible.map((workout) => (
-                <Card key={workout.id} className="border-border/70 bg-card/65 shadow-none transition hover:border-primary/30">
-                  <CardContent className="flex items-center gap-3 p-3 sm:p-4">
-                    <button type="button" onClick={() => onOpenWorkout(workout.id)} className="flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-secondary text-muted-foreground"><Dumbbell className="size-4.5" /></span>
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-center gap-2">
-                          <span className="font-medium">{format(parseWorkoutDate(workout.performedAt), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}</span>
-                          {workout.status !== "completed" ? <Badge variant="secondary">Rascunho</Badge> : null}
-                        </span>
-                        <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                          {workout.exerciseNames.join(" · ") || "Sem exercícios"}
-                        </span>
-                        <span className="mt-1 block text-xs text-muted-foreground">
-                          {workout.exerciseCount} exercícios · {workout.setCount} séries · {workout.volumeKg.toLocaleString("pt-BR")} kg
-                        </span>
-                      </span>
-                      <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-                    </button>
-                    {workout.status === "completed" ? (
-                      <Button variant="ghost" size="icon" aria-label="Repetir treino" className="shrink-0 text-primary" onClick={() => onRepeatWorkout(workout.id)}><Copy /></Button>
-                    ) : null}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </section>
-      </div>
+  return (
+    <div
+      className="flex items-center gap-3 border-b border-border py-3"
+      onTouchStart={(event) => {
+        startX.current = event.changedTouches[0]?.clientX ?? null;
+      }}
+      onTouchEnd={(event) => {
+        const start = startX.current;
+        const end = event.changedTouches[0]?.clientX;
+        startX.current = null;
+        if (start == null || end == null || !onRepeat) return;
+        if (start - end > 72) onRepeat();
+      }}
+    >
+      <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <span className="flex items-center gap-2">
+          <span className="truncate font-medium">{title}</span>
+          {workout.status !== "completed" ? <Badge variant="secondary">Rascunho</Badge> : null}
+          {hasRecord ? <Badge className="bg-record text-record-foreground">PR</Badge> : null}
+        </span>
+        <span className="mt-1 block text-sm text-muted-foreground">
+          <span className="mypr-num">{workout.volumeKg.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}</span> kg
+          {workout.exerciseNames.length > 0 ? ` · ${workout.exerciseNames.join(" · ")}` : ""}
+        </span>
+      </button>
+      {onRepeat ? (
+        <Button variant="ghost" size="sm" className="shrink-0 text-primary" onClick={onRepeat}>
+          Repetir
+        </Button>
+      ) : null}
     </div>
   );
 }

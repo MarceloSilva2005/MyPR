@@ -2,9 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Activity, CloudOff, Dumbbell, Home, LoaderCircle, UserRound } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { MarkLedger, MarkToday, MarkWait, MarkYou } from "@/components/mypr/icons";
 import { Toaster } from "@/components/ui/sonner";
 import { Brand } from "@/components/mypr/brand";
 import { HomeView } from "@/components/mypr/home-view";
@@ -18,14 +16,13 @@ import { useMyPrData } from "@/hooks/use-mypr-data";
 import { db, getStoredActiveProfileId, getStoredTheme, setStoredActiveProfileId } from "@/lib/db";
 import { cn } from "@/lib/utils";
 
-type View = "home" | "workouts" | "analytics" | "profile";
-type EditorState = { open: boolean; workoutId?: string; repeat?: boolean };
+type View = "home" | "history" | "you" | "analytics";
+type EditorState = { open: boolean; workoutId?: string; repeat?: boolean; templateId?: string };
 
 const navigation = [
-  { id: "home" as const, label: "Início", icon: Home },
-  { id: "workouts" as const, label: "Treinos", icon: Dumbbell },
-  { id: "analytics" as const, label: "Evolução", icon: Activity },
-  { id: "profile" as const, label: "Perfil", icon: UserRound },
+  { id: "home" as const, label: "Hoje", icon: MarkToday },
+  { id: "history" as const, label: "Histórico", icon: MarkLedger },
+  { id: "you" as const, label: "Você", icon: MarkYou },
 ];
 
 export function AppShell() {
@@ -66,7 +63,21 @@ export function AppShell() {
   useEffect(() => {
     const theme = activeProfile?.theme ?? getStoredTheme();
     document.documentElement.classList.toggle("dark", theme === "dark");
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#1A1613" : "#E6DCCB");
   }, [activeProfile]);
+
+  useEffect(() => {
+    document.body.classList.toggle("mypr-training", editor.open);
+    return () => document.body.classList.remove("mypr-training");
+  }, [editor.open]);
+
+  useEffect(() => {
+    if (!data) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("treino") !== "1") return;
+    window.history.replaceState({}, "", "/");
+    setEditor({ open: true });
+  }, [data]);
 
   const openEditor = (state?: Omit<EditorState, "open">) => {
     setDetailsId(undefined);
@@ -75,70 +86,65 @@ export function AppShell() {
 
   const content = useMemo(() => {
     if (!data) return null;
-    if (view === "workouts") {
-      return <WorkoutsView summaries={data.summaries} onStartWorkout={() => openEditor()} onOpenWorkout={setDetailsId} onRepeatWorkout={(workoutId) => openEditor({ workoutId, repeat: true })} />;
+    if (view === "history") {
+      return <WorkoutsView summaries={data.summaries} records={data.records} onStartWorkout={() => openEditor()} onOpenWorkout={setDetailsId} onRepeatWorkout={(workoutId) => openEditor({ workoutId, repeat: true })} />;
     }
     if (view === "analytics") {
-      return <AnalyticsView exercises={data.exercises} workouts={data.workouts} workoutExercises={data.workoutExercises} sets={data.sets} summaries={data.summaries} records={data.records} />;
+      return <AnalyticsView exercises={data.exercises} workouts={data.workouts} workoutExercises={data.workoutExercises} sets={data.sets} summaries={data.summaries} records={data.records} onBack={() => setView("you")} />;
     }
-    if (view === "profile") {
-      return <ProfileView exercises={data.exercises} pendingSync={data.pendingSync} quickAdd={quickAddExercise} onQuickAddConsumed={() => setQuickAddExercise(false)} />;
+    if (view === "you") {
+      return <ProfileView exercises={data.exercises} pendingSync={data.pendingSync} quickAdd={quickAddExercise} onQuickAddConsumed={() => setQuickAddExercise(false)} onOpenAnalytics={() => setView("analytics")} />;
     }
-    const lastCompletedWorkout = [...data.summaries]
-      .filter((workout) => workout.status === "completed")
-      .sort((a, b) => b.performedAt.localeCompare(a.performedAt))[0];
-    const quickStart = lastCompletedWorkout ? () => openEditor({ workoutId: lastCompletedWorkout.id, repeat: true }) : () => openEditor();
+    const inProgress = data.summaries.find((workout) => workout.status !== "completed");
+    const lastCompletedWorkout = data.summaries.find((workout) => workout.status === "completed");
 
-    return <HomeView summaries={data.summaries} records={data.records} onStartWorkout={() => openEditor()} onOpenWorkout={setDetailsId} onViewHistory={() => setView("workouts")} onRepeatLastWorkout={lastCompletedWorkout ? () => openEditor({ workoutId: lastCompletedWorkout.id, repeat: true }) : undefined} onViewProfile={() => { setQuickAddExercise(true); setView("profile"); }} onQuickStart={quickStart} />;
+    return (
+      <HomeView
+        summaries={data.summaries}
+        records={data.records}
+        templates={data.templates}
+        onStartWorkout={() => openEditor(lastCompletedWorkout ? { workoutId: lastCompletedWorkout.id, repeat: true } : undefined)}
+        onContinueWorkout={inProgress ? () => openEditor({ workoutId: inProgress.id }) : undefined}
+        onStartRoutine={(templateId) => openEditor({ templateId })}
+      />
+    );
   }, [data, quickAddExercise, view]);
 
   if (!data || !profiles) {
     return (
       <div className="grid min-h-dvh place-items-center text-center">
-        <div><LoaderCircle className="mx-auto size-7 animate-spin text-primary" /><p className="mt-3 text-sm text-muted-foreground">Preparando seu histórico…</p></div>
+        <div><MarkWait className="mx-auto size-7 animate-spin text-primary" /><p className="mt-3 text-sm text-muted-foreground">Preparando seu histórico…</p></div>
       </div>
     );
   }
 
   return (
     <div className="min-h-dvh bg-background text-foreground">
-      <PwaRegister />
+      <PwaRegister completedCount={data.summaries.filter((workout) => workout.status === "completed").length} hidden={editor.open} />
       <div className="mx-auto flex min-h-dvh max-w-[1600px]">
-        <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 border-r border-border/70 bg-[linear-gradient(180deg,rgba(13,25,45,.96),rgba(7,16,30,.98))] p-5 lg:flex lg:flex-col">
+        <aside className={cn("sticky top-0 hidden h-dvh w-56 shrink-0 border-r border-border bg-background p-6 lg:flex lg:flex-col", editor.open && "lg:hidden")}>
           <Brand />
-          <nav className="mt-10 space-y-1" aria-label="Navegação principal">
+          <nav className="mt-12 flex flex-col" aria-label="Navegação principal">
             {navigation.map((item) => {
               const Icon = item.icon;
-              const active = view === item.id;
+              const active = view === item.id || (item.id === "you" && view === "analytics");
               return (
-                <Button key={item.id} variant="ghost" onClick={() => setView(item.id)} className={cn("h-11 w-full justify-start gap-3 px-3 text-muted-foreground", active && "bg-primary/12 text-primary hover:bg-primary/15 hover:text-primary")}>
-                  <Icon className="size-4.5" /> {item.label}
-                  {active ? <span className="ml-auto h-5 w-1 rounded-full bg-primary" /> : null}
-                </Button>
+                <button key={item.id} type="button" onClick={() => setView(item.id)} className={cn("flex h-12 items-center gap-3 border-l-2 border-transparent pl-3 text-left text-sm text-muted-foreground", active && "border-primary text-foreground")}>
+                  <Icon className="size-4" /> {item.label}
+                </button>
               );
             })}
           </nav>
           {hasHistory ? (
-            <div className="mt-auto rounded-2xl border border-border/70 bg-card/55 p-4">
-              <div className="flex items-center gap-2 text-sm font-medium"><CloudOff className="size-4 text-primary" /> Offline-first</div>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Registre agora. Sincronize quando estiver conectado.</p>
-              {data ? <Badge variant="secondary" className="mt-3">{data.pendingSync} alterações locais</Badge> : null}
-            </div>
+            <p className="mt-auto text-xs text-muted-foreground">{data.pendingSync} alterações neste aparelho</p>
           ) : null}
         </aside>
 
         <div className="min-w-0 flex-1">
-          <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border/60 bg-background/88 px-4 backdrop-blur-xl lg:px-8">
+          <header className={cn("sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background px-4 lg:px-8", editor.open && "hidden")}>
             <div className="lg:hidden"><Brand compact /></div>
-            <p className="hidden text-sm font-medium text-muted-foreground lg:block">{hasHistory ? activeLabel : ""}</p>
-            <div className="flex items-center gap-2">
-              {hasHistory ? (
-                <Badge variant="outline" className="border-emerald-400/20 bg-emerald-400/8 text-emerald-300"><span className="mr-1.5 size-1.5 rounded-full bg-emerald-400" />Dados salvos</Badge>
-              ) : null}
-              {hasHistory ? (
-                <Button variant="ghost" size="icon" className="hidden rounded-full sm:inline-flex" onClick={() => setView("profile")} aria-label="Abrir perfil"><UserRound /></Button>
-              ) : null}
-            </div>
+            <p className="hidden text-sm font-medium text-muted-foreground lg:block">{activeLabel ?? (view === "analytics" ? "Evolução" : "")}</p>
+            <p className="text-xs text-muted-foreground">{hasHistory ? "Neste aparelho" : ""}</p>
           </header>
 
           <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
@@ -147,14 +153,14 @@ export function AppShell() {
         </div>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border/70 bg-background/94 px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl lg:hidden" aria-label="Navegação principal">
-        <div className="mx-auto grid max-w-lg grid-cols-4">
+      <nav className={cn("fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2 lg:hidden", editor.open && "hidden")} aria-label="Navegação principal">
+        <div className="mx-auto grid max-w-lg grid-cols-3">
           {navigation.map((item) => {
             const Icon = item.icon;
-            const active = view === item.id;
+            const active = view === item.id || (item.id === "you" && view === "analytics");
             return (
-              <button key={item.id} type="button" onClick={() => setView(item.id)} className={cn("flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-medium text-muted-foreground transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", active && "bg-primary/10 text-primary")}>
-                <Icon className="size-5" strokeWidth={active ? 2.4 : 1.8} /> {item.label}
+              <button key={item.id} type="button" onClick={() => setView(item.id)} className={cn("flex min-h-14 flex-col items-center justify-center gap-1 border-t-2 border-transparent text-[11px] font-medium text-muted-foreground", active && "border-primary text-foreground")}>
+                <Icon className="size-4" /> {item.label}
               </button>
             );
           })}
@@ -163,7 +169,7 @@ export function AppShell() {
 
       {data ? (
         <>
-          <WorkoutEditor open={editor.open} source={{ workoutId: editor.workoutId, repeat: editor.repeat }} exercises={data.exercises} templates={data.templates} history={{ workouts: data.workouts, workoutExercises: data.workoutExercises, sets: data.sets }} onOpenChange={(open) => setEditor((current) => ({ ...current, open }))} />
+          <WorkoutEditor open={editor.open} source={{ workoutId: editor.workoutId, repeat: editor.repeat, templateId: editor.templateId }} exercises={data.exercises} templates={data.templates} history={{ workouts: data.workouts, workoutExercises: data.workoutExercises, sets: data.sets }} onOpenChange={(open) => setEditor((current) => ({ ...current, open }))} />
           <WorkoutDetails workoutId={detailsId} exercises={data.exercises} onClose={() => setDetailsId(undefined)} onEdit={(workoutId) => openEditor({ workoutId })} onRepeat={(workoutId) => openEditor({ workoutId, repeat: true })} />
         </>
       ) : null}

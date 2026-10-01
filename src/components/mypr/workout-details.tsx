@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CheckCircle2, Copy, Pencil } from "lucide-react";
+import { MarkCheck, MarkCopy, MarkPencil } from "@/components/mypr/icons";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { Exercise, WorkoutBundle } from "@/lib/domain";
@@ -47,7 +47,7 @@ export function WorkoutDetails({
                 <section key={link.id} className="rounded-2xl border border-border/70 bg-card/60 p-4">
                   <div className="flex items-center justify-between gap-3">
                     <h3 className="font-semibold">{exerciseMap.get(link.exerciseId) ?? "Exercício"}</h3>
-                    <CheckCircle2 className="size-4.5 text-emerald-400" />
+                    <MarkCheck className="size-4 text-record" />
                   </div>
                   <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
                     {sets.map((set) => (
@@ -61,8 +61,8 @@ export function WorkoutDetails({
               );
             })}
             <div className="grid grid-cols-2 gap-2 pt-2">
-              <Button variant="outline" onClick={() => onRepeat(bundle.workout.id)}><Copy /> Repetir</Button>
-              <Button onClick={() => onEdit(bundle.workout.id)}><Pencil /> Editar</Button>
+              <Button variant="outline" onClick={() => onRepeat(bundle.workout.id)}><MarkCopy /> Repetir</Button>
+              <Button onClick={() => onEdit(bundle.workout.id)}><MarkPencil /> Editar</Button>
             </div>
           </div>
         ) : null}

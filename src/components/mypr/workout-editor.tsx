@@ -3,18 +3,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import {
-  ArrowDown,
-  ArrowUp,
-  Check,
-  Copy,
-  Dumbbell,
-  Minus,
-  Plus,
-  Search,
-  Timer,
-  Trash2,
-  X,
-} from "lucide-react";
+  MarkBar,
+  MarkCheck,
+  MarkClose,
+  MarkCopy,
+  MarkDown,
+  MarkMinus,
+  MarkPlus,
+  MarkSearch,
+  MarkTimer,
+  MarkTrash,
+  MarkUp,
+} from "@/components/mypr/icons";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -40,7 +40,7 @@ import {
   type WorkoutLogHistory,
 } from "@/lib/workout-logging";
 
-type EditorSource = { workoutId?: string; repeat?: boolean };
+type EditorSource = { workoutId?: string; repeat?: boolean; templateId?: string };
 const REST_STORAGE_KEY = "mypr-rest-seconds";
 
 function readRestSeconds(exerciseId: string) {
@@ -434,7 +434,7 @@ export function WorkoutEditor({
       <DialogContent className="flex h-[100dvh] max-h-[100dvh] w-full max-w-none flex-col gap-0 rounded-none border-0 bg-background p-0 sm:h-[92dvh] sm:max-h-[900px] sm:max-w-3xl sm:rounded-3xl sm:border">
         <DialogHeader className="border-b border-border/70 px-4 py-4 pr-14 sm:px-6">
           <div className="flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary"><Dumbbell className="size-5" /></span>
+            <MarkBar className="size-7 text-primary" />
             <div>
               <DialogTitle className="text-lg">{source.repeat ? "Repetir treino" : source.workoutId ? "Editar treino" : "Registrar treino"}</DialogTitle>
               <DialogDescription>Salvo automaticamente neste dispositivo</DialogDescription>
@@ -443,17 +443,17 @@ export function WorkoutEditor({
         </DialogHeader>
         <p className="sr-only" aria-live="polite">{prBanner ?? timerNote}</p>
         {prBanner ? (
-          <div className="border-b border-amber-400/30 bg-amber-400/15 px-4 py-2 text-center font-mono text-sm font-bold text-amber-700 dark:text-amber-200">
+          <div className="border-b border-record bg-record px-4 py-2 text-center text-sm font-semibold text-record-foreground">
             {prBanner}
           </div>
         ) : null}
         {timer ? (
           <div className="border-b border-primary/20 bg-primary/10 px-4 py-3 sm:px-6">
             <div className="flex items-center gap-3">
-              <Timer className="size-4 shrink-0 text-primary" />
+              <MarkTimer className="size-4 shrink-0 text-primary" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs text-muted-foreground">Descanso · {timer.exerciseName}</p>
-                <p className="font-mono text-3xl font-semibold tabular-nums tracking-tight" aria-hidden="true">{formatClock(remainingMs)}</p>
+                <p className="mypr-num text-4xl" aria-hidden="true">{formatClock(remainingMs)}</p>
               </div>
               <Button type="button" variant="secondary" className="h-11 px-3" onClick={extendRest}>+30 s</Button>
               <Button type="button" variant="ghost" className="h-11 px-3" onClick={() => setTimer(null)}>Pular</Button>
@@ -492,9 +492,9 @@ export function WorkoutEditor({
                     <Button type="button" variant="ghost" size="sm" className="h-9 shrink-0 px-2 text-muted-foreground" aria-label={`Descanso de ${restSecondsFor(item.exerciseId)} segundos. Toque para alterar.`} onClick={() => cycleRest(item.exerciseId)}>
                       {restSecondsFor(item.exerciseId)} s
                     </Button>
-                    <Button variant="ghost" size="icon-sm" aria-label="Mover exercício para cima" disabled={itemIndex === 0} onClick={() => moveItem(itemIndex, -1)}><ArrowUp /></Button>
-                    <Button variant="ghost" size="icon-sm" aria-label="Mover exercício para baixo" disabled={itemIndex === items.length - 1} onClick={() => moveItem(itemIndex, 1)}><ArrowDown /></Button>
-                    <Button variant="ghost" size="icon-sm" aria-label="Remover exercício" className="text-muted-foreground hover:text-destructive" onClick={() => setItems((current) => current.filter((entry) => entry.id !== item.id))}><Trash2 /></Button>
+                    <Button variant="ghost" size="icon-sm" aria-label="Mover exercício para cima" disabled={itemIndex === 0} onClick={() => moveItem(itemIndex, -1)}><MarkUp /></Button>
+                    <Button variant="ghost" size="icon-sm" aria-label="Mover exercício para baixo" disabled={itemIndex === items.length - 1} onClick={() => moveItem(itemIndex, 1)}><MarkDown /></Button>
+                    <Button variant="ghost" size="icon-sm" aria-label="Remover exercício" className="text-muted-foreground hover:text-destructive" onClick={() => setItems((current) => current.filter((entry) => entry.id !== item.id))}><MarkTrash /></Button>
                   </div>
                   <div className="px-3 py-2 sm:px-4">
                     <div className="grid grid-cols-[32px_1fr_1fr_44px] items-end gap-2 px-1 pb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
@@ -512,24 +512,24 @@ export function WorkoutEditor({
                             <div className="grid grid-cols-[32px_1fr_1fr_44px] items-center gap-2">
                               <div className="text-center">
                                 <span className="font-mono text-sm text-muted-foreground">{setIndex + 1}</span>
-                                <Button type="button" variant="ghost" size="icon-sm" className="mt-1 text-muted-foreground" aria-label={`Duplicar série ${setIndex + 1}`} onClick={(event) => { event.stopPropagation(); duplicateSet(item.id, set.id); }}><Copy /></Button>
+                                <Button type="button" variant="ghost" size="icon-sm" className="mt-1 text-muted-foreground" aria-label={`Duplicar série ${setIndex + 1}`} onClick={(event) => { event.stopPropagation(); duplicateSet(item.id, set.id); }}><MarkCopy /></Button>
                               </div>
                               <div className="space-y-1" onClick={(event) => event.stopPropagation()} onPointerDown={(event) => event.stopPropagation()}>
                                 <Input aria-label={`Carga da série ${setIndex + 1}`} inputMode="decimal" type="number" min="0" step="2.5" value={set.loadKg ?? ""} onChange={(event) => updateSetValue(item.id, set.id, "loadKg", event.target.value)} className="h-11 bg-background/70 px-2 text-center font-mono text-lg" placeholder={previousSet ? formatLoadKg(previousSet.loadKg) : "0"} />
                                 <div className="grid grid-cols-2 gap-1">
-                                  <Button type="button" variant="outline" className="h-9" aria-label={`Diminuir carga da série ${setIndex + 1}`} onClick={() => changeSetByStep(item.id, set.id, "loadKg", -1, previousSet?.loadKg ?? null)}><Minus /></Button>
-                                  <Button type="button" variant="outline" className="h-9" aria-label={`Aumentar carga da série ${setIndex + 1}`} onClick={() => changeSetByStep(item.id, set.id, "loadKg", 1, previousSet?.loadKg ?? null)}><Plus /></Button>
+                                  <Button type="button" variant="outline" className="h-9" aria-label={`Diminuir carga da série ${setIndex + 1}`} onClick={() => changeSetByStep(item.id, set.id, "loadKg", -1, previousSet?.loadKg ?? null)}><MarkMinus /></Button>
+                                  <Button type="button" variant="outline" className="h-9" aria-label={`Aumentar carga da série ${setIndex + 1}`} onClick={() => changeSetByStep(item.id, set.id, "loadKg", 1, previousSet?.loadKg ?? null)}><MarkPlus /></Button>
                                 </div>
                               </div>
                               <div className="space-y-1" onClick={(event) => event.stopPropagation()} onPointerDown={(event) => event.stopPropagation()}>
                                 <Input aria-label={`Repetições da série ${setIndex + 1}`} inputMode="numeric" type="number" min="0" step="1" value={set.reps ?? ""} onChange={(event) => updateSetValue(item.id, set.id, "reps", event.target.value)} className="h-11 bg-background/70 px-2 text-center font-mono text-lg" placeholder={previousSet ? String(previousSet.reps) : "10"} />
                                 <div className="grid grid-cols-2 gap-1">
-                                  <Button type="button" variant="outline" className="h-9" aria-label={`Diminuir repetições da série ${setIndex + 1}`} onClick={() => changeSetByStep(item.id, set.id, "reps", -1, previousSet?.reps ?? null)}><Minus /></Button>
-                                  <Button type="button" variant="outline" className="h-9" aria-label={`Aumentar repetições da série ${setIndex + 1}`} onClick={() => changeSetByStep(item.id, set.id, "reps", 1, previousSet?.reps ?? null)}><Plus /></Button>
+                                  <Button type="button" variant="outline" className="h-9" aria-label={`Diminuir repetições da série ${setIndex + 1}`} onClick={() => changeSetByStep(item.id, set.id, "reps", -1, previousSet?.reps ?? null)}><MarkMinus /></Button>
+                                  <Button type="button" variant="outline" className="h-9" aria-label={`Aumentar repetições da série ${setIndex + 1}`} onClick={() => changeSetByStep(item.id, set.id, "reps", 1, previousSet?.reps ?? null)}><MarkPlus /></Button>
                                 </div>
                               </div>
                               <div className="flex h-full items-center justify-center" onClick={(event) => event.stopPropagation()} onPointerDown={(event) => event.stopPropagation()}>
-                                <Checkbox aria-label={`Marcar série ${setIndex + 1} como concluída`} checked={set.completed} onCheckedChange={(checked) => updateSetCompletion(item, set.id, checked === true)} className="size-7 rounded-lg data-[state=checked]:border-emerald-400 data-[state=checked]:bg-emerald-400" />
+                                <Checkbox aria-label={`Marcar série ${setIndex + 1} como concluída`} checked={set.completed} onCheckedChange={(checked) => updateSetCompletion(item, set.id, checked === true)} className="size-7 data-[state=checked]:border-record data-[state=checked]:bg-record data-[state=checked]:text-record-foreground" />
                               </div>
                             </div>
                             {previousSet ? <p className="px-1 pt-1 text-xs text-muted-foreground">Última · {formatSetSnapshot(previousSet)}</p> : null}
@@ -538,7 +538,7 @@ export function WorkoutEditor({
                       })}
                     </div>
                     <Button variant="ghost" size="sm" className="mt-2 h-11 w-full text-primary" onClick={() => setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, sets: [...entry.sets, newSet(entry.sets.at(-1)?.loadKg ?? null, entry.sets.at(-1)?.reps ?? null)] } : entry))}>
-                      <Plus /> série
+                      <MarkPlus /> série
                     </Button>
                   </div>
                 </section>
@@ -548,10 +548,10 @@ export function WorkoutEditor({
                 <section className="rounded-2xl border border-primary/25 bg-primary/5 p-4">
                   <div className="flex items-center justify-between gap-3">
                     <h3 className="font-semibold">Adicionar exercício</h3>
-                    <Button variant="ghost" size="icon-sm" aria-label="Fechar busca" onClick={() => setPickerOpen(false)}><X /></Button>
+                    <Button variant="ghost" size="icon-sm" aria-label="Fechar busca" onClick={() => setPickerOpen(false)}><MarkClose /></Button>
                   </div>
                   <div className="relative mt-3">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <MarkSearch className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                     <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar exercício" className="h-11 bg-background pl-9" autoFocus />
                   </div>
                   <div className="mt-3 max-h-52 space-y-1 overflow-y-auto">
@@ -597,7 +597,7 @@ export function WorkoutEditor({
               ) : (
                 <div className="space-y-3">
                   <Button variant="outline" className="h-12 w-full border-dashed border-primary/45 text-primary hover:bg-primary/8" onClick={() => setPickerOpen(true)}>
-                    <Plus /> Adicionar exercício
+                    <MarkPlus /> Adicionar exercício
                   </Button>
                   {templates.length > 0 ? (
                     <Button variant="secondary" className="h-10 w-full" onClick={() => setPickerOpen(true)}>
@@ -620,7 +620,7 @@ export function WorkoutEditor({
           <div className="flex items-center justify-between gap-3">
             <Badge variant="secondary" className="hidden sm:flex">{items.flatMap((item) => item.sets).filter((set) => set.completed).length} séries concluídas</Badge>
             <Button className="h-11 flex-1 sm:max-w-56" onClick={finishWorkout} disabled={saving || !ready}>
-              <Check /> {saving ? "Salvando…" : "Concluir treino"}
+              <MarkCheck /> {saving ? "Salvando…" : "Concluir treino"}
             </Button>
           </div>
         </footer>

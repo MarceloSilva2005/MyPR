@@ -28,6 +28,7 @@ export interface Workout {
   id: string;
   performedAt: string;
   status: WorkoutStatus;
+  routineName?: string;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string;
@@ -88,6 +89,8 @@ export interface WorkoutTemplateExercise {
 export interface WorkoutTemplate {
   id: string;
   name: string;
+  /** 0 = domingo … 6 = sábado, no mesmo índice de Date.getDay(). */
+  days?: number[];
   items: WorkoutTemplateExercise[];
   createdAt: string;
   updatedAt: string;
