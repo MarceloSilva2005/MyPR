@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
   workflow_call:
+  workflow_dispatch:
+  schedule:
+    # Weekly run: scans the full history for secrets and re-audits dependencies.
+    - cron: "0 12 * * 1"
 
 permissions:
   contents: read
