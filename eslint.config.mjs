@@ -58,6 +58,11 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.flat["recommended-latest"].rules,
       ...jsxA11y.flatConfigs.recommended.rules,
+      // A scrollable region must be reachable by keyboard (WCAG 2.1.1), so it takes a tab stop.
+      "jsx-a11y/no-noninteractive-tabindex": [
+        "error",
+        { roles: ["region", "tabpanel", "application"] },
+      ],
       ...nextPlugin.configs["core-web-vitals"].rules,
     },
   },
