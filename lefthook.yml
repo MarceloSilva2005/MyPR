@@ -1,0 +1,25 @@
+pre-commit:
+  parallel: true
+  commands:
+    lint:
+      glob: "*.{ts,tsx,js,mjs}"
+      run: pnpm exec eslint --no-warn-ignored {staged_files}
+    format:
+      glob: "*.{ts,tsx,js,mjs,json,css,yml,yaml}"
+      run: pnpm exec prettier --check {staged_files}
+    hygiene:
+      run: node scripts/check-repo-hygiene.ts --staged
+
+commit-msg:
+  commands:
+    commitlint:
+      run: pnpm exec commitlint --edit {1}
+    hygiene:
+      run: node scripts/check-repo-hygiene.ts --message {1}
+
+pre-push:
+  commands:
+    typecheck:
+      run: pnpm typecheck
+    test:
+      run: pnpm test

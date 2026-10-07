@@ -1,0 +1,40 @@
+/* Provisional styles for the foundation stage. The design system replaces them. */
+:root {
+  color-scheme: light dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+main {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 4rem 1rem;
+}
+
+h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.5rem;
+  letter-spacing: -0.01em;
+}
+
+p {
+  margin: 0 0 1rem;
+}
+
+.status {
+  opacity: 0.75;
+}
+
+footer {
+  margin-top: 3rem;
+  font-size: 0.875rem;
+  opacity: 0.75;
+}

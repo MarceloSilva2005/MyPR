@@ -1,0 +1,23 @@
+# dependencies
+node_modules/
+
+# build output
+.next/
+out/
+coverage/
+reports/
+*.tsbuildinfo
+next-env.d.ts
+
+# environment
+.env
+.env.*
+!.env.example
+
+# local tooling
+.vercel/
+.hygiene-terms
+
+# operating system
+.DS_Store
+Thumbs.db
