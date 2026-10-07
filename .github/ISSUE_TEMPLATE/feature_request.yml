@@ -1,0 +1,21 @@
+name: Melhoria
+description: Proposta de nova funcionalidade ou ajuste de comportamento.
+labels: ["melhoria"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema ou necessidade
+      description: Qual dificuldade esta melhoria resolve, e para quem.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposta
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativas consideradas

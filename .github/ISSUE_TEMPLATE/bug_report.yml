@@ -1,0 +1,42 @@
+name: Defeito
+description: Algo não funciona como esperado.
+labels: ["defeito"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: O que aconteceu
+      description: Descreva o comportamento observado.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: O que era esperado
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Passos para reproduzir
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Ambiente
+      description: Navegador, sistema operacional, dispositivo e versão do MyPR.
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Gravidade
+      options:
+        - P0 - perda de dados ou falha de segurança
+        - P1 - fluxo crítico bloqueado
+        - P2 - funcionalidade degradada, com alternativa
+        - P3 - problema menor
+    validations:
+      required: true
