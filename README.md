@@ -13,7 +13,7 @@ O trabalho é dividido em etapas, e cada etapa termina com testes aprovados, com
 | Etapa | Escopo                                        | Versão   | Situação  |
 | ----- | --------------------------------------------- | -------- | --------- |
 | E0    | Fundação do repositório, ferramentas e CI     | `v0.1.0` | Concluída |
-| E1    | Design System, navegação e estados            | `v0.2.0` | Planejada |
+| E1    | Design System, navegação e estados            | `v0.2.0` | Concluída |
 | E2    | Dados, autenticação e autorização             | `v0.3.0` | Planejada |
 | E3    | Exercícios e rotinas                          | `v0.4.0` | Planejada |
 | E4    | Treino ao vivo, persistência e retomada       | `v0.5.0` | Planejada |
