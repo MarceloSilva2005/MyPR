@@ -28,3 +28,13 @@ O produto precisa parecer um SaaS profissional e consistente, sem aparência de 
 
 - Mais código inicial para os gráficos; a V1 tem apenas três tipos.
 - Duas formas de validar formulários, unificadas por um contrato de erro único na camada `ds/form`.
+
+## Atualização na etapa E1 (07/10/2026)
+
+- **Toast próprio.** O toast do React Aria ainda é marcado como instável, então o MyPR usa uma implementação pequena e acessível (região viva educada, pausa ao focar ou passar o mouse, no máximo três notificações). Será reavaliado quando a API do React Aria for estabilizada.
+- **API de seleção.** `Select` e `ComboBox` usam `value` e `onChange`, pois `selectedKey` e `onSelectionChange` estão obsoletos na versão adotada.
+- **Provedores por área.** Os provedores do React Aria (localização, roteador e toasts) são montados nas áreas `/app` e `/dev`, não no layout raiz, para que a página pública estática não carregue código de interface do app.
+- **Carregamento sob demanda.** A folha "Mais" do celular só é baixada quando aberta.
+- **Orçamento.** O JavaScript de primeira carga, comprimido, tem limite por rota (`/` em 145 kB e `/app` em 175 kB). Cerca de 120 kB dele é o próprio React e o runtime do Next.
+- **Paleta de séries.** A distância mínima entre séries e o contraste contra o fundo são verificados em teste, nos dois temas.
+- Detalhes do contrato visual em [docs/design-system.md](../design-system.md).

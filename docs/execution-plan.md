@@ -7,7 +7,7 @@
 | Base normativa | Documento Mestre de Produto, UX/UI e Engenharia, v1.1 |
 | Autores do projeto | [MarceloSilva2005](https://github.com/MarceloSilva2005) e [Felipe1dev](https://github.com/Felipe1dev) |
 | Idioma | Conteúdo em PT-BR. Nomes de arquivos, código, commits e branches em inglês. |
-| Estado | Etapa E0 concluída em 07/10/2026 (`v0.1.0`). Próxima: E1. Aprovações registradas abaixo. |
+| Estado | Etapas E0 (`v0.1.0`) e E1 (`v0.2.0`) concluídas em 07/10/2026. Próxima: E2. Aprovações registradas abaixo. |
 
 ### Registro de aprovações
 
@@ -21,6 +21,15 @@ Aprovadas por MarceloSilva2005 em 07/10/2026: A-01 (repositório público com di
 - **T0.4, prova do ruleset.** Em vez de abrir um PR descartável, a prova é a tentativa real de push direto e de force push em `main`, que devem ser rejeitados, mais a conferência da configuração por API.
 - **T0.5, adiado.** A ligação dos projetos Vercel e Supabase depende de P-03. O contrato de ambiente e o endpoint de saúde foram entregues; a conexão dos provedores passa a ser a primeira tarefa da E2 (Supabase) e uma pendência do titular da conta (Vercel).
 - **CODEOWNERS.** Lista apenas MarceloSilva2005 enquanto Felipe1dev não tiver acesso de escrita; o GitHub ignora donos sem esse acesso.
+
+### Ajustes registrados durante a E1
+
+- **Lighthouse CI substituído por medição de laboratório.** CLS e LCP são medidos pelo Playwright nas rotas principais e o JavaScript de primeira carga tem limite por rota (`pnpm check:bundle`). O Lighthouse CI volta na E6, quando houver páginas com conteúdo real.
+- **Galeria como rota em vez de Storybook.** A galeria (`/dev/system`) é habilitada por `ENABLE_DESIGN_GALLERY` e responde 404 por padrão (T1.6).
+- **Regressão visual somente em Linux.** As linhas de base são geradas na CI pelo workflow `Visual baselines`; no Windows os testes visuais são ignorados por diferenças de renderização de fonte.
+- **Toast próprio.** O toast do React Aria ainda é instável (ver ADR 0007).
+- **Check `e2e` obrigatório.** Entra no ruleset de `main` ao fim da E1, como previsto.
+- **Release.** O workflow passou a fixar os links relativos das notas na tag e a usar o primeiro título como nome da release.
 
 Este plano responde ao Apêndice E do Documento Mestre. Ele escolhe e justifica a arquitetura, divide o trabalho em etapas verificáveis, define a estratégia Git e de releases e lista o que ainda depende de decisão dos autores. Quando uma decisão aqui contraria ou interpreta o Documento Mestre, isso está registrado na seção 11.
 
