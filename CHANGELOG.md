@@ -4,6 +4,24 @@ Todas as mudanças relevantes do MyPR são registradas aqui. O formato segue o [
 
 ## [Não lançado]
 
+## [0.2.0] - 2026-10-07
+
+Design System, shell e padrões de estado (etapa E1). Pré-lançamento. Notas completas em [docs/releases/v0.2.0.md](docs/releases/v0.2.0.md).
+
+### Adicionado
+
+- Tokens de cor, tipografia, espaçamento, raio, elevação e movimento, com tema claro, escuro e do sistema.
+- Componentes de formulário, seleção, diálogos, feedback, dados, treino e gráficos acessíveis.
+- Shell de navegação responsivo e telas de carregamento, erro e página não encontrada.
+- Galeria interna do Design System, testes de acessibilidade, desempenho de laboratório e regressão visual.
+- Salvaguardas automáticas de design e orçamento de JavaScript por rota.
+
+### Corrigido
+
+- Avisos, descanso concluído, eixos de gráfico, variação de métricas, barra lateral do tablet e botões primários duplicados, encontrados na revisão visual.
+- Orçamento de bundle que contava o polyfill de navegadores antigos e página pública que carregava código do app.
+- Links relativos quebrados nas notas de release.
+
 ## [0.1.0] - 2026-10-07
 
 Fundação do projeto (etapa E0). Pré-lançamento. Notas completas em [docs/releases/v0.1.0.md](docs/releases/v0.1.0.md).
@@ -23,5 +41,6 @@ Fundação do projeto (etapa E0). Pré-lançamento. Notas completas em [docs/rel
 - Regra de camadas que não detectava violações em arquivos TypeScript.
 - Varredura de segredos incapaz de cobrir o primeiro push, agora complementada por execuções completas manuais e semanais.
 
-[Não lançado]: https://github.com/MarceloSilva2005/MyPR/compare/v0.1.0...HEAD
+[Não lançado]: https://github.com/MarceloSilva2005/MyPR/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/MarceloSilva2005/MyPR/releases/tag/v0.2.0
 [0.1.0]: https://github.com/MarceloSilva2005/MyPR/releases/tag/v0.1.0
