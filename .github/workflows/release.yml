@@ -78,10 +78,14 @@ jobs:
         run: |
           NOTES="docs/releases/$TAG.md"
           TITLE="$(head -n 1 "$NOTES" | sed 's/^# *//')"
+          # The first heading becomes the release title, and relative links are pinned to the tag
+          # so they keep working outside the repository tree.
+          BASE="https://github.com/${GITHUB_REPOSITORY}/blob/${TAG}/docs"
+          tail -n +3 "$NOTES" | sed -e "s#](\.\./#](${BASE}/#g" > release-notes.md
           (cd reports && zip -q -r ../verification-report.zip .)
           if [ "$PRERELEASE" = "true" ]; then FLAGS=(--prerelease); else FLAGS=(--latest); fi
           gh release create "$TAG" verification-report.zip \
             --verify-tag \
             --title "$TITLE" \
-            --notes-file "$NOTES" \
+            --notes-file release-notes.md \
             "${FLAGS[@]}"
