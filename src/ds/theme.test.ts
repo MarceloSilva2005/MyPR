@@ -18,6 +18,10 @@ describe("parseThemePreference", () => {
 });
 
 describe("themeInitScript", () => {
+  it("reads the same storage key as the client hook", () => {
+    expect(themeInitScript).toContain(`getItem("${THEME_STORAGE_KEY}")`);
+  });
+
   function run(getItem: (key: string) => string | null): string | undefined {
     const dataset: Record<string, string> = {};
     runInNewContext(themeInitScript, {
