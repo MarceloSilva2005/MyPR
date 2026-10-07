@@ -1,0 +1,43 @@
+/** Default accessible labels for built-in controls. Screens can override them through props. */
+export const dsLabels = {
+  close: "Fechar",
+  loading: "Carregando",
+  optional: "opcional",
+  noResults: "Nenhum resultado encontrado",
+  showTable: "Ver como tabela",
+  showChart: "Ver como gráfico",
+  chartHint: "Use as setas do teclado para percorrer os pontos.",
+  notifications: "Notificações",
+  dismiss: "Dispensar",
+  set: {
+    load: "Carga",
+    reps: "Repetições",
+    previous: "Anterior",
+    completed: "concluída",
+    changeType: "alterar tipo",
+    types: {
+      work: "Trabalho",
+      warmup: "Aquecimento",
+      drop: "Drop set",
+    },
+  },
+  rest: {
+    title: "Descanso",
+    addTime: "Adicionar tempo",
+    pause: "Pausar",
+    resume: "Retomar",
+    dismiss: "Dispensar",
+    minimize: "Minimizar",
+    expand: "Expandir",
+    done: "Descanso concluído",
+    remaining: "restantes",
+  },
+  sync: {
+    "saved-local": "Salvo neste dispositivo",
+    syncing: "Sincronizando",
+    synced: "Sincronizado",
+    unsynced: "Não sincronizado",
+    offline: "Sem conexão",
+    retry: "Tentar novamente",
+  },
+} as const;
