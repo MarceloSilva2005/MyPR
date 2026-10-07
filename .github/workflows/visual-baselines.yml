@@ -1,9 +1,13 @@
 name: Visual baselines
 
-# Regenerates the reference screenshots on Linux, where fonts render reproducibly. Run it manually
-# on a branch after an intentional visual change, review the images, and commit them.
+# Regenerates the reference screenshots on Linux, where fonts render reproducibly. Add the label
+# "linhas de base" to a pull request (or run it manually) after an intentional visual change,
+# review the images from the artifact, and commit them.
 on:
   workflow_dispatch:
+  # Works before the workflow reaches the default branch, and is the usual way to ask for new images.
+  pull_request:
+    types: [labeled]
 
 permissions:
   contents: read
@@ -11,6 +15,7 @@ permissions:
 jobs:
   baselines:
     name: baselines
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'linhas de base'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
