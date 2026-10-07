@@ -6,6 +6,11 @@ const schema = z.object({
     .enum(["true", "false"])
     .default("false")
     .transform((value) => value === "true"),
+  // Serves the internal design system gallery. Never enabled in production.
+  ENABLE_DESIGN_GALLERY: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
 });
 
 export type Env = z.infer<typeof schema>;
