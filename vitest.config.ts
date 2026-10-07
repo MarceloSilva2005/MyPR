@@ -7,11 +7,11 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts", "scripts/**/*.test.ts"],
+    include: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.ts"],
     coverage: {
       provider: "v8",
-      include: ["src/**/*.ts", "scripts/**/*.ts"],
-      exclude: ["**/*.test.ts"],
+      include: ["src/**/*.{ts,tsx}", "scripts/**/*.ts"],
+      exclude: ["**/*.test.{ts,tsx}", "src/app/**", "src/test/**"],
       reporter: ["text-summary", "lcov"],
     },
   },
