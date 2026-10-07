@@ -7,7 +7,7 @@
 | Base normativa | Documento Mestre de Produto, UX/UI e Engenharia, v1.1 |
 | Autores do projeto | [MarceloSilva2005](https://github.com/MarceloSilva2005) e [Felipe1dev](https://github.com/Felipe1dev) |
 | Idioma | Conteúdo em PT-BR. Nomes de arquivos, código, commits e branches em inglês. |
-| Estado | Etapa E0 em execução. Aprovações registradas abaixo. |
+| Estado | Etapa E0 concluída em 07/10/2026 (`v0.1.0`). Próxima: E1. Aprovações registradas abaixo. |
 
 ### Registro de aprovações
 
