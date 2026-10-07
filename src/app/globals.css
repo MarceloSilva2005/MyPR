@@ -1,40 +1,40 @@
-/* Provisional styles for the foundation stage. The design system replaces them. */
-:root {
-  color-scheme: light dark;
-}
+@import "tailwindcss";
+@import "../ds/tokens.css";
 
-* {
-  box-sizing: border-box;
-}
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    background-color: var(--color-bg);
+    color: var(--color-fg);
+    -webkit-text-size-adjust: 100%;
+    /* Keeps focused elements clear of fixed headers and navigation (WCAG 2.4.11). */
+    scroll-padding-block: 5rem;
+  }
 
-body {
-  margin: 0;
-  font-family: system-ui, sans-serif;
-  line-height: 1.5;
-}
+  body {
+    min-height: 100dvh;
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
 
-main {
-  max-width: 40rem;
-  margin: 0 auto;
-  padding: 4rem 1rem;
-}
+  :focus-visible {
+    outline: 2px solid var(--color-accent-text);
+    outline-offset: 2px;
+  }
 
-h1 {
-  margin: 0 0 0.5rem;
-  font-size: 1.5rem;
-  letter-spacing: -0.01em;
-}
+  ::selection {
+    background-color: var(--color-accent-subtle);
+  }
 
-p {
-  margin: 0 0 1rem;
-}
+  button,
+  [role="button"] {
+    cursor: pointer;
+  }
 
-.status {
-  opacity: 0.75;
-}
-
-footer {
-  margin-top: 3rem;
-  font-size: 0.875rem;
-  opacity: 0.75;
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
 }
