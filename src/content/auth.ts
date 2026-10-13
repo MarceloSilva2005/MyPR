@@ -24,7 +24,7 @@ export const authContent = {
   },
   checkEmail: {
     title: "Confirme seu e-mail",
-    body: "Se o e-mail puder ser cadastrado, um link de confirmação chega em instantes. Ele vale por 10 minutos.",
+    body: "Se este endereço ainda não tiver conta, o link de confirmação chega em instantes. Ele vale por 10 minutos.",
     spam: "Não chegou em alguns minutos? Confira a caixa de spam ou envie de novo.",
     resend: "Enviar de novo",
     resent: "Se houver uma confirmação pendente para esse e-mail, enviamos um novo link.",
