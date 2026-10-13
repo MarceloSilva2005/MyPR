@@ -53,6 +53,16 @@ export async function emailLink(request: APIRequestContext, to: string): Promise
   return path;
 }
 
+/**
+ * Waits for the Turnstile widget to issue its token. The test keys always
+ * pass, without asking anything (see .env.example).
+ */
+export async function passHumanCheck(page: Page): Promise<void> {
+  await expect(page.locator('input[name="cf-turnstile-response"]')).not.toHaveValue("", {
+    timeout: 15_000,
+  });
+}
+
 export async function signUp(
   page: Page,
   account: { displayName: string; email: string; password: string },
@@ -61,6 +71,7 @@ export async function signUp(
   await page.getByLabel("Nome de exibição").fill(account.displayName);
   await page.getByLabel("E-mail").fill(account.email);
   await page.getByLabel("Senha", { exact: true }).fill(account.password);
+  await passHumanCheck(page);
   await page.getByRole("button", { name: "Criar conta" }).click();
   await expect(page).toHaveURL(/\/check-email$/);
 }

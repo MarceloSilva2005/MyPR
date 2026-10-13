@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { authContent } from "@/content/auth";
+import { getSupabaseEnv } from "@/env";
 import { InlineAlert } from "@/ds/feedback";
 import { AuthHeader } from "@/features/auth/auth-header";
 import { SignInForm } from "@/features/auth/forms";
@@ -28,7 +29,10 @@ export default async function SignInPage({
     <>
       <AuthHeader title={authContent.signIn.title} />
       {notice ? <InlineAlert tone={notice.tone}>{notice.text}</InlineAlert> : null}
-      <SignInForm next={typeof next === "string" ? next : undefined} />
+      <SignInForm
+        next={typeof next === "string" ? next : undefined}
+        siteKey={getSupabaseEnv().TURNSTILE_SITE_KEY}
+      />
     </>
   );
 }

@@ -12,6 +12,8 @@ const SHARED_TABLES: readonly string[] = [];
 const ELEVATED_FUNCTIONS: readonly string[] = [
   // Writes only to private.rate_limits; inputs are validated (rate-limits.test.ts).
   "consume_rate_limit",
+  // Reads private.rate_limits only; same validation as above.
+  "peek_rate_limit",
 ];
 
 // Each query returns the offending objects in `public`; an empty result passes.

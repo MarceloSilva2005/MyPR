@@ -10,13 +10,21 @@ import { authContent } from "@/content/auth";
 import { safeRedirectPath } from "@/lib/redirect";
 import { AUTH_ROUTES } from "@/lib/routes";
 import { emailOnlySchema, newPasswordSchema, signInSchema, signUpSchema } from "@/schemas/auth";
-import { clientAddress, RATE_RULES, withinRateLimits } from "@/server/rate-limit";
+import { anyLimitReached, clientAddress, RATE_RULES, withinRateLimits } from "@/server/rate-limit";
 import { createSupabaseServerClient } from "@/server/supabase";
+import { TURNSTILE_FIELD, verifyHuman, type HumanCheckAction } from "@/server/turnstile";
 
 // Next.js rejects Server Actions whose Origin differs from the host, which
 // covers cross-site request forgery for every action in this file.
 
 const { errors } = authContent;
+
+/** Message for a failed human check, or nothing when it passed. */
+async function humanCheckFailure(form: FormData, action: HumanCheckAction): Promise<string | null> {
+  const result = await verifyHuman(form.get(TURNSTILE_FIELD), action, await clientAddress());
+  if (result === "passed") return null;
+  return result === "unavailable" ? errors.unavailable : errors.humanCheck;
+}
 
 type SignUpField = "displayName" | "email" | "password";
 
@@ -38,6 +46,9 @@ export async function signUp(
       }),
     };
   }
+
+  const humanCheck = await humanCheckFailure(form, "sign-up");
+  if (humanCheck) return { status: "error", values, message: humanCheck };
 
   if (!(await withinRateLimits([[RATE_RULES.signUpByAddress, await clientAddress()]]))) {
     return { status: "error", values, message: errors.rateLimited };
@@ -82,8 +93,20 @@ export async function signIn(
     };
   }
 
+  const address = await clientAddress();
+  const failures = [
+    [RATE_RULES.signInFailuresByEmail, parsed.data.email],
+    [RATE_RULES.signInFailuresByAddress, address],
+  ] as const;
+
+  // After repeated failures for this e-mail or address, sign-in asks for the human check.
+  if (await anyLimitReached(failures)) {
+    const humanCheck = await humanCheckFailure(form, "sign-in");
+    if (humanCheck) return { status: "error", values, message: humanCheck, humanCheck: true };
+  }
+
   const allowed = await withinRateLimits([
-    [RATE_RULES.signInByAddress, await clientAddress()],
+    [RATE_RULES.signInByAddress, address],
     [RATE_RULES.signInByEmail, parsed.data.email],
   ]);
   if (!allowed) return { status: "error", values, message: errors.rateLimited };
@@ -92,7 +115,13 @@ export async function signIn(
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) {
     if (error.code === "email_not_confirmed") await rememberPendingEmail(parsed.data.email);
-    return { status: "error", values, message: messageForAuthError(error.code) };
+    if (error.code === "invalid_credentials") await withinRateLimits(failures);
+    return {
+      status: "error",
+      values,
+      message: messageForAuthError(error.code),
+      humanCheck: await anyLimitReached(failures),
+    };
   }
 
   const next = form.get("next");
@@ -147,6 +176,9 @@ export async function requestPasswordReset(
   if (!parsed.success) {
     return { status: "error", values: raw, fieldErrors: { email: errors.email } };
   }
+
+  const humanCheck = await humanCheckFailure(form, "password-reset");
+  if (humanCheck) return { status: "error", values: raw, message: humanCheck };
 
   if (!(await withinEmailLimits(parsed.data.email))) {
     return { status: "error", values: raw, message: errors.rateLimited };

@@ -16,4 +16,7 @@ runs:
           echo "SUPABASE_URL=$API_URL"
           echo "SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
           echo "RATE_LIMIT_SECRET=$(openssl rand -hex 32)"
+          # Cloudflare's public Turnstile test keys, which always pass.
+          echo "TURNSTILE_SITE_KEY=1x00000000000000000000AA"
+          echo "TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA"
         } >> "$GITHUB_ENV"

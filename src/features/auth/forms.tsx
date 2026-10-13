@@ -8,6 +8,7 @@ import {
   updatePassword,
 } from "./actions";
 import { AuthForm } from "./auth-form";
+import { HumanCheck } from "./human-check";
 import { authContent } from "@/content/auth";
 import { Link } from "@/ds/link";
 import { PasswordField } from "@/ds/password-field";
@@ -37,7 +38,7 @@ function EmailField({ error, defaultValue }: { error?: string; defaultValue?: st
   );
 }
 
-export function SignInForm({ next }: { next: string | undefined }) {
+export function SignInForm({ next, siteKey }: { next: string | undefined; siteKey: string }) {
   return (
     <AuthForm
       action={signIn}
@@ -69,13 +70,17 @@ export function SignInForm({ next }: { next: string | undefined }) {
               {authContent.signIn.forgot}
             </Link>
           </div>
+          {/* Only after repeated failures for this e-mail or address. */}
+          {state.humanCheck ? (
+            <HumanCheck siteKey={siteKey} action="sign-in" resetSignal={state} />
+          ) : null}
         </>
       )}
     </AuthForm>
   );
 }
 
-export function SignUpForm() {
+export function SignUpForm({ siteKey }: { siteKey: string }) {
   return (
     <AuthForm
       action={signUp}
@@ -111,6 +116,7 @@ export function SignUpForm() {
             {...passwordToggle}
             {...(state.fieldErrors?.password ? { error: state.fieldErrors.password } : {})}
           />
+          <HumanCheck siteKey={siteKey} action="sign-up" resetSignal={state} />
         </>
       )}
     </AuthForm>
@@ -134,14 +140,17 @@ export function ResendConfirmationForm({ email }: { email: string }) {
   );
 }
 
-export function ForgotPasswordForm() {
+export function ForgotPasswordForm({ siteKey }: { siteKey: string }) {
   return (
     <AuthForm action={requestPasswordReset} submitLabel={authContent.forgotPassword.submit}>
       {(state) => (
-        <EmailField
-          {...(state.values?.email ? { defaultValue: state.values.email } : {})}
-          {...(state.fieldErrors?.email ? { error: state.fieldErrors.email } : {})}
-        />
+        <>
+          <EmailField
+            {...(state.values?.email ? { defaultValue: state.values.email } : {})}
+            {...(state.fieldErrors?.email ? { error: state.fieldErrors.email } : {})}
+          />
+          <HumanCheck siteKey={siteKey} action="password-reset" resetSignal={state} />
+        </>
       )}
     </AuthForm>
   );

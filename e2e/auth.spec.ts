@@ -3,6 +3,7 @@ import {
   completeOnboarding,
   confirmFromEmail,
   emailLink,
+  passHumanCheck,
   sharedAccount,
   signIn,
   signUp,
@@ -118,6 +119,45 @@ test.describe("entrada", () => {
   });
 });
 
+test.describe("verificação de segurança", () => {
+  test("o cadastro não aceita envio sem a verificação", async ({ page }) => {
+    // A script that never sets up the widget, as when Cloudflare is out of reach.
+    await page.route("https://challenges.cloudflare.com/**", (route) =>
+      route.fulfill({ contentType: "text/javascript", body: "" }),
+    );
+    await page.goto("/sign-up");
+    await page.getByLabel("Nome de exibição").fill("Sem verificação");
+    await page.getByLabel("E-mail").fill(uniqueEmail("sem-verificacao"));
+    await page.getByLabel("Senha", { exact: true }).fill("frase longa qualquer");
+    await expect(page.getByText(/A verificação de segurança não carregou/)).toBeVisible();
+    await page.getByRole("button", { name: "Criar conta" }).click();
+
+    await expect(
+      page.getByRole("alert").filter({ hasText: "Conclua a verificação de segurança" }),
+    ).toBeVisible();
+    await expect(page).toHaveURL(/\/sign-up$/);
+  });
+
+  test("o login pede a verificação depois de três falhas", async ({ page }) => {
+    // Failures from this test's own address; other tests also miss the shared account.
+    const guessed = uniqueEmail("tentativas");
+    const check = page.getByRole("group", { name: "Verificação de segurança" });
+    await page.goto("/sign-in");
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      await expect(check).toBeHidden();
+      await signIn(page, guessed, `senha errada ${String(attempt)}`);
+      await expect(
+        page.getByRole("alert").filter({ hasText: "E-mail ou senha incorretos." }),
+      ).toBeVisible();
+    }
+    await expect(check).toBeVisible();
+
+    await passHumanCheck(page);
+    await signIn(page, sharedAccount.email, sharedAccount.password);
+    await expect(page).toHaveURL(/\/app$/);
+  });
+});
+
 test.describe("recuperação de senha", () => {
   test("define uma nova senha pelo link do e-mail e entra com ela", async ({ page }) => {
     const email = uniqueEmail("recupera");
@@ -128,6 +168,7 @@ test.describe("recuperação de senha", () => {
 
     await page.goto("/forgot-password");
     await page.getByLabel("E-mail").fill(email);
+    await passHumanCheck(page);
     await page.getByRole("button", { name: "Enviar link" }).click();
     await expect(page.getByRole("status")).toContainText("Se existir uma conta com esse e-mail");
 
@@ -152,6 +193,7 @@ test.describe("recuperação de senha", () => {
   test("pedir recuperação para e-mail sem conta tem a mesma resposta", async ({ page }) => {
     await page.goto("/forgot-password");
     await page.getByLabel("E-mail").fill(uniqueEmail("ninguem"));
+    await passHumanCheck(page);
     await page.getByRole("button", { name: "Enviar link" }).click();
     await expect(page.getByRole("status")).toContainText("Se existir uma conta com esse e-mail");
   });

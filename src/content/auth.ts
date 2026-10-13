@@ -55,6 +55,9 @@ export const authContent = {
   linkInvalid: "Este link é inválido ou expirou. Entre para receber um novo, se precisar.",
   passwordUpdated: "Senha atualizada.",
   signedOut: "Você saiu da sua conta.",
+  humanCheckLabel: "Verificação de segurança",
+  humanCheckUnavailable:
+    "A verificação de segurança não carregou. Recarregue a página ou tente de novo em instantes.",
   showPassword: "Mostrar senha",
   hidePassword: "Ocultar senha",
   errors: {
@@ -66,6 +69,7 @@ export const authContent = {
     samePassword: "A nova senha precisa ser diferente da atual.",
     credentials: "E-mail ou senha incorretos.",
     notConfirmed: "Confirme seu e-mail antes de entrar. Podemos enviar o link de novo.",
+    humanCheck: "Conclua a verificação de segurança e envie de novo.",
     rateLimited: "Muitas tentativas seguidas. Aguarde alguns minutos e tente de novo.",
     unavailable: "Não foi possível concluir agora. Tente de novo em instantes.",
   },

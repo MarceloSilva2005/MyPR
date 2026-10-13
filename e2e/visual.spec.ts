@@ -1,5 +1,11 @@
 import { expect, test } from "./fixtures";
-import { confirmFromEmail, signUp, uniqueAddress, uniqueEmail } from "./support/auth";
+import {
+  confirmFromEmail,
+  passHumanCheck,
+  signUp,
+  uniqueAddress,
+  uniqueEmail,
+} from "./support/auth";
 
 // Baselines are rendered on Linux (CI), where fonts are reproducible. On other systems the
 // screenshots would differ by anti-aliasing alone, so these checks do not run there.
@@ -71,10 +77,14 @@ for (const scheme of SCHEMES) {
     test("cadastro com erros de validação", async ({ page }) => {
       await page.goto("/sign-up");
       await page.getByLabel("E-mail").fill("nome@");
+      await passHumanCheck(page);
       await page.getByRole("button", { name: "Criar conta" }).click();
       await expect(page.getByText(/Informe um e-mail válido/)).toBeVisible();
       await page.evaluate(() => document.fonts.ready);
-      await expect(page).toHaveScreenshot(`sign-up-errors-${scheme}.png`);
+      // The Turnstile frame is drawn by Cloudflare and changes on its own.
+      await expect(page).toHaveScreenshot(`sign-up-errors-${scheme}.png`, {
+        mask: [page.getByRole("group", { name: "Verificação de segurança" })],
+      });
     });
   });
 }

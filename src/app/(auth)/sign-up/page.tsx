@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { authContent } from "@/content/auth";
+import { getSupabaseEnv } from "@/env";
 import { AuthHeader } from "@/features/auth/auth-header";
 import { SignUpForm } from "@/features/auth/forms";
 
@@ -10,7 +11,7 @@ export default function SignUpPage() {
   return (
     <>
       <AuthHeader title={authContent.signUp.title} description={authContent.signUp.description} />
-      <SignUpForm />
+      <SignUpForm siteKey={getSupabaseEnv().TURNSTILE_SITE_KEY} />
     </>
   );
 }
