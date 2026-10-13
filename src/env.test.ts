@@ -8,8 +8,8 @@ describe("parseSupabaseEnv", () => {
     SUPABASE_PUBLISHABLE_KEY: "sb_publishable_local",
   };
 
-  it("defaults the site address to the development server", () => {
-    expect(parseSupabaseEnv(valid).APP_URL).toBe("http://localhost:3000");
+  it("accepts the local stack", () => {
+    expect(parseSupabaseEnv(valid)).toEqual(valid);
   });
 
   it("names every missing variable without echoing values", () => {
