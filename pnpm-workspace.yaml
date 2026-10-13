@@ -1,3 +1,4 @@
 allowBuilds:
   lefthook: true
+  supabase: true
   unrs-resolver: false
