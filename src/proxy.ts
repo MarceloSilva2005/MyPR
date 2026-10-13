@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getEnv, getSupabaseEnv } from "@/env";
+import { SESSION_COOKIE } from "@/lib/cookies";
 import { buildContentSecurityPolicy, createNonce } from "@/lib/csp";
 import { DEFAULT_AFTER_SIGN_IN } from "@/lib/redirect";
 import { AUTH_ROUTES, GUEST_ONLY_ROUTES, isPrivatePath, needsSession } from "@/lib/routes";
@@ -35,6 +36,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   if (needsSession(pathname)) {
     const env = getSupabaseEnv();
     const supabase = createServerClient(env.SUPABASE_URL, env.SUPABASE_PUBLISHABLE_KEY, {
+      cookieOptions: SESSION_COOKIE,
       cookies: {
         getAll: () => request.cookies.getAll(),
         setAll(list, cacheHeaders) {
