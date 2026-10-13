@@ -1,0 +1,19 @@
+name: Local Supabase
+description: Starts the local Supabase stack from an empty state and points the application at it.
+
+runs:
+  using: composite
+  steps:
+    - name: Start the stack
+      shell: bash
+      run: pnpm exec supabase start --exclude studio,postgres-meta,imgproxy,logflare,vector,supavisor
+    # Local development keys only; they are generated for this throwaway stack.
+    - name: Export the connection settings
+      shell: bash
+      run: |
+        eval "$(pnpm exec supabase status -o env 2>/dev/null)"
+        {
+          echo "SUPABASE_URL=$API_URL"
+          echo "SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
+          echo "RATE_LIMIT_SECRET=$(openssl rand -hex 32)"
+        } >> "$GITHUB_ENV"

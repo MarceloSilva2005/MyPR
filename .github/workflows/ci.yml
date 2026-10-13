@@ -72,8 +72,7 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Start the database from an empty state
-        run: pnpm exec supabase start --exclude studio,postgres-meta,imgproxy,logflare,vector,supavisor
+      - uses: ./.github/actions/local-supabase
       - name: Lint database functions
         run: pnpm exec supabase db lint --level warning --fail-on warning
       - name: Isolation and schema tests
@@ -100,6 +99,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Install browser
         run: pnpm exec playwright install --with-deps chromium
+      - uses: ./.github/actions/local-supabase
       - run: pnpm build
       - name: End-to-end, accessibility, performance and visual tests
         run: pnpm test:e2e
