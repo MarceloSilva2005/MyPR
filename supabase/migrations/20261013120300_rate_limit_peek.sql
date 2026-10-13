@@ -7,7 +7,7 @@ create function public.peek_rate_limit(
 )
 returns integer
 language plpgsql
-stable
+volatile
 security definer
 set search_path = ''
 as $$
