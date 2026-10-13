@@ -62,16 +62,16 @@ export function RadioGroup<T extends string>({
               <span
                 aria-hidden
                 className={cx(
-                  "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border border-line-control bg-bg",
+                  "flex size-5 shrink-0 items-center justify-center rounded-full border border-line-control bg-bg",
                   "group-data-[selected]:border-accent group-data-[selected]:bg-accent",
                 )}
               >
-                <span className="size-1.5 rounded-full bg-accent-fg opacity-0 group-data-[selected]:opacity-100" />
+                <span className="size-2 rounded-full bg-accent-fg opacity-0 group-data-[selected]:opacity-100" />
               </span>
               <span className="text-sm font-medium text-fg">{option.label}</span>
             </RadioButton>
             {option.hint ? (
-              <Text slot="description" className="block pl-7 text-sm text-fg-muted">
+              <Text slot="description" className="block pl-8 text-sm text-fg-muted">
                 {option.hint}
               </Text>
             ) : null}
