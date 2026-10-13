@@ -1,0 +1,2 @@
+-- Local development data. The system exercise catalog arrives with E3.
+-- Test personas are created inside each database test and rolled back.
