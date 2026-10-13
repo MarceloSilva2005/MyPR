@@ -26,6 +26,8 @@ interface AuthFormProps<Field extends string> {
   children: (state: AuthFormState<Field>) => ReactNode;
   /** Extra content under the submit button, such as links to other flows. */
   footer?: ReactNode;
+  /** Called once when the action reports success, for example to close a dialog. */
+  onDone?: (state: AuthFormState<Field>) => void;
 }
 
 /**
@@ -40,12 +42,19 @@ export function AuthForm<Field extends string>({
   submitVariant = "primary",
   children,
   footer,
+  onDone,
 }: AuthFormProps<Field>) {
   const [state, dispatch, pending] = useActionState(action, idle as AuthFormState<Field>);
   const formRef = useRef<HTMLFormElement>(null);
   const messageRef = useRef<HTMLDivElement>(null);
+  // Read through a ref so a new callback on each render does not repeat the call.
+  const onDoneRef = useRef(onDone);
+  useEffect(() => {
+    onDoneRef.current = onDone;
+  });
 
   useEffect(() => {
+    if (state.status === "done") onDoneRef.current?.(state);
     if (state.status !== "error") return;
     const firstInvalid = Object.keys(state.fieldErrors ?? {})[0];
     const field = firstInvalid
