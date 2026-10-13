@@ -20,7 +20,7 @@ test.beforeEach(async ({ context }, testInfo) => {
 
 async function newAccount(page: Page, password: string): Promise<string> {
   const email = uniqueEmail("conta");
-  await signUp(page, { displayName: "Conta", email, password });
+  await signUp(page, { displayName: "Bruno", email, password });
   await confirmFromEmail(page, email);
   await completeOnboarding(page);
   return email;

@@ -65,6 +65,7 @@ export const authContent = {
     email: "Informe um e-mail válido, como nome@exemplo.com.",
     password: "A senha precisa ter de 8 a 72 caracteres.",
     passwordRequired: "Informe a senha.",
+    contextPassword: "A senha não pode conter MyPR, seu nome ou o início do seu e-mail.",
     weakPassword: "Essa senha é muito comum ou apareceu em vazamentos. Escolha outra.",
     samePassword: "A nova senha precisa ser diferente da atual.",
     credentials: "E-mail ou senha incorretos.",

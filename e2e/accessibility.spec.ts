@@ -110,7 +110,7 @@ for (const scheme of SCHEMES) {
       test.skip(testInfo.project.name === "tablet", "Coberto no desktop e no celular.");
       await context.setExtraHTTPHeaders({ "x-real-ip": uniqueAddress() });
       const email = uniqueEmail("a11y");
-      await signUp(page, { displayName: "Acesso", email, password: "frase longa de acesso" });
+      await signUp(page, { displayName: "Rui", email, password: "frase longa para leitores" });
       await confirmFromEmail(page, email);
 
       for (const next of ["Começar", "Continuar", "Pular"]) {
