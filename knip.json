@@ -1,7 +1,8 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "project": ["src/**/*.{ts,tsx}", "scripts/**/*.ts", "e2e/**/*.ts", "supabase/tests/**/*.ts"],
-  "entry": ["scripts/*.ts", "supabase/tests/**/*.test.ts"],
+  "entry": ["scripts/*.ts", "supabase/tests/**/*.test.ts", "e2e/*.setup.ts"],
   "ignoreExportsUsedInFile": true,
-  "ignoreDependencies": ["tailwindcss"]
+  "ignoreDependencies": ["tailwindcss"],
+  "ignore": ["src/data/database.ts"]
 }
