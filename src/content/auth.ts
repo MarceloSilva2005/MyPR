@@ -24,7 +24,7 @@ export const authContent = {
   },
   checkEmail: {
     title: "Confirme seu e-mail",
-    body: "Se o e-mail puder ser cadastrado, um link de confirmação chega em instantes. Ele vale por 1 hora.",
+    body: "Se o e-mail puder ser cadastrado, um link de confirmação chega em instantes. Ele vale por 10 minutos.",
     spam: "Não chegou em alguns minutos? Confira a caixa de spam ou envie de novo.",
     resend: "Enviar de novo",
     resent: "Se houver uma confirmação pendente para esse e-mail, enviamos um novo link.",
@@ -34,7 +34,7 @@ export const authContent = {
     title: "Recuperar acesso",
     description: "Informe o e-mail da conta. Enviamos um link para criar uma nova senha.",
     submit: "Enviar link",
-    sent: "Se existir uma conta com esse e-mail, enviamos um link para criar uma nova senha. Ele vale por 1 hora.",
+    sent: "Se existir uma conta com esse e-mail, enviamos um link para criar uma nova senha. Ele vale por 10 minutos.",
     back: "Voltar para entrar",
   },
   resetPassword: {

@@ -71,7 +71,8 @@ enable_confirmations = true
 secure_password_change = true
 max_frequency = "1s"
 otp_length = 6
-otp_expiry = 3600
+# ASVS 5.0 6.5.5: e-mail links that sign someone in last at most 10 minutes.
+otp_expiry = 600
 
 [auth.sms]
 enable_signup = false

@@ -43,6 +43,8 @@ export async function verifyHuman(
       method: "POST",
       body,
       signal: AbortSignal.timeout(5000),
+      // The endpoint is fixed; a redirect would send the secret elsewhere.
+      redirect: "error",
     });
     if (!response.ok) return "unavailable";
     result = (await response.json()) as SiteverifyResponse;
