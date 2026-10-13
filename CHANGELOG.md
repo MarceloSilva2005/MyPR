@@ -4,6 +4,26 @@ Todas as mudanças relevantes do MyPR são registradas aqui. O formato segue o [
 
 ## [Não lançado]
 
+## [0.3.0] - 2026-10-13
+
+Dados, autenticação e autorização (etapa E2). Pré-lançamento. Notas completas em [docs/releases/v0.3.0.md](docs/releases/v0.3.0.md).
+
+### Adicionado
+
+- Banco Postgres no Supabase com migrações, perfil com RLS forçada, teste-meta de esquema e testes de isolamento entre contas.
+- Cadastro, confirmação de e-mail, login, saída, recuperação e troca de senha, encerramento de outras sessões, com telas e e-mails em PT-BR.
+- Limitação de taxa no Postgres e Cloudflare Turnstile no cadastro, na recuperação e após falhas de login.
+- CSP com nonce, cabeçalhos de segurança e cookies `__Host-` em produção.
+- Configuração inicial retomável com preferências e perfil de treino.
+- Mapeamento do OWASP ASVS 5.0 nível 2 e modelo de ameaças.
+
+### Corrigido
+
+- Validador de dados enviado ao navegador na configuração inicial.
+- Controles de preferência anunciados duas vezes por leitores de tela.
+- Sessão do próprio dispositivo encerrada ao trocar a senha.
+- Sessão encerrada em outro dispositivo aceita até o token expirar.
+
 ## [0.2.0] - 2026-10-07
 
 Design System, shell e padrões de estado (etapa E1). Pré-lançamento. Notas completas em [docs/releases/v0.2.0.md](docs/releases/v0.2.0.md).
