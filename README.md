@@ -42,13 +42,15 @@ Requisitos:
 
 - Node.js 24 (versão em `.nvmrc`)
 - pnpm 12
+- Docker Desktop, para o Supabase local (banco, autenticação e caixa de e-mails de teste)
 
 ```bash
 pnpm install
+pnpm db:start
 pnpm dev
 ```
 
-A aplicação sobe em `http://localhost:3000`. As variáveis de ambiente estão descritas em `.env.example`.
+Copie `.env.example` para `.env.local` e preencha a chave publicável mostrada por `pnpm exec supabase status` e um `RATE_LIMIT_SECRET` próprio. A aplicação sobe em `http://localhost:3000`, e os e-mails enviados no ambiente local aparecem em `http://127.0.0.1:54324`.
 
 ### Scripts
 
@@ -63,6 +65,11 @@ A aplicação sobe em `http://localhost:3000`. As variáveis de ambiente estão 
 | `pnpm knip`         | Detecção de código e dependências sem uso        |
 | `pnpm format:check` | Verificação de formatação                        |
 | `pnpm check:guards` | Verificação de higiene do repositório            |
+| `pnpm db:start`     | Sobe o Supabase local                            |
+| `pnpm db:reset`     | Recria o banco local a partir das migrações      |
+| `pnpm db:types`     | Gera os tipos do banco em `src/data/database.ts` |
+| `pnpm test:db`      | Testes de banco: isolamento, RLS e convenções    |
+| `pnpm test:e2e`     | Testes de ponta a ponta (exigem o Supabase local) |
 
 ## Documentação
 

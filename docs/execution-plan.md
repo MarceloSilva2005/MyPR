@@ -7,11 +7,11 @@
 | Base normativa | Documento Mestre de Produto, UX/UI e Engenharia, v1.1 |
 | Autores do projeto | [MarceloSilva2005](https://github.com/MarceloSilva2005) e [Felipe1dev](https://github.com/Felipe1dev) |
 | Idioma | Conteúdo em PT-BR. Nomes de arquivos, código, commits e branches em inglês. |
-| Estado | Etapas E0 (`v0.1.0`) e E1 (`v0.2.0`) concluídas em 07/10/2026. Próxima: E2. Aprovações registradas abaixo. |
+| Estado | Etapas E0 (`v0.1.0`) e E1 (`v0.2.0`) concluídas em 07/10/2026; E2 (`v0.3.0`) concluída em 13/10/2026. Próxima: E3. Aprovações registradas abaixo. |
 
 ### Registro de aprovações
 
-Aprovadas por MarceloSilva2005 em 07/10/2026: A-01 (repositório público com direitos reservados, sem arquivo de licença), A-02 (stack das decisões D-01 a D-22), A-03 (push somente ao fim da etapa), A-04 (janela de exclusão de conta de 7 dias), A-05 (direção visual com accent azul ultramar e fonte Geist). Pendentes: A-06 (responsável pela revisão dos textos legais, necessário na E8) e A-07 (Docker Desktop e contas Supabase, Vercel e Sentry, necessários a partir da E2).
+Aprovadas por MarceloSilva2005 em 07/10/2026: A-01 (repositório público com direitos reservados, sem arquivo de licença), A-02 (stack das decisões D-01 a D-22), A-03 (push somente ao fim da etapa), A-04 (janela de exclusão de conta de 7 dias), A-05 (direção visual com accent azul ultramar e fonte Geist). Docker Desktop instalado em 13/10/2026 (parte da A-07). Pendentes: A-06 (responsável pela revisão dos textos legais, necessário na E8), o restante da A-07 (contas Supabase, Vercel, Sentry e Cloudflare, necessárias para a primeira implantação) e a decisão sobre autenticação multifator (ver `docs/security/accepted-risks.md`).
 
 ### Ajustes registrados durante a E0
 
@@ -30,6 +30,18 @@ Aprovadas por MarceloSilva2005 em 07/10/2026: A-01 (repositório público com di
 - **Toast próprio.** O toast do React Aria ainda é instável (ver ADR 0007).
 - **Check `e2e` obrigatório.** Entra no ruleset de `main` ao fim da E1, como previsto.
 - **Release.** O workflow passou a fixar os links relativos das notas na tag e a usar o primeiro título como nome da release.
+
+### Ajustes registrados durante a E2
+
+- **Desenvolvimento sem contas.** Toda a etapa roda contra o Supabase local (Docker): banco, autenticação e caixa de e-mails de teste. A ligação com os projetos hospedados fica para a primeira implantação (P-03).
+- **CSP por nonce em todas as páginas.** A política por hashes para a página pública não se sustenta no Next.js; todas as páginas passam a ser renderizadas por requisição (ADR 0004). O orçamento de JavaScript passou a ser medido pelos manifestos do build.
+- **Sessão confirmada no servidor a cada requisição.** O proxy usa `getUser` em vez de só validar a assinatura, para que uma sessão encerrada deixe de valer na navegação seguinte.
+- **Links de e-mail com botão.** Abrir o link não consome o token; a ação acontece ao pressionar o botão da página, por causa dos verificadores de link dos provedores de e-mail. Links valem 10 minutos (ASVS 5.0 V6.5.5).
+- **Turnstile verificado pela aplicação.** O CAPTCHA nativo do Supabase exigiria verificação em todo login; a verificação própria permite pedir o Turnstile só após três falhas, como prevê a D-06.
+- **Onboarding em rota própria.** As páginas do app passaram a um grupo de rotas com o shell; `/app/onboarding` fica fora dele, sem navegação. O passo 4 (primeira rotina) chega na E3; a numeração exibida conta só os passos oferecidos.
+- **Sair em todas as páginas.** O botão fica na barra lateral e no menu "Mais" (ASVS 5.0 V7.4.4).
+- **Escopo de commit.** Acrescentado `onboarding`.
+- **Check `db` obrigatório.** Entra no ruleset de `main` ao fim da E2, como previsto.
 
 Este plano responde ao Apêndice E do Documento Mestre. Ele escolhe e justifica a arquitetura, divide o trabalho em etapas verificáveis, define a estratégia Git e de releases e lista o que ainda depende de decisão dos autores. Quando uma decisão aqui contraria ou interpreta o Documento Mestre, isso está registrado na seção 11.
 

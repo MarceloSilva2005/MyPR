@@ -19,6 +19,14 @@ Todo texto da interface fica em `src/content`, e não espalhado pelos componente
 
 Veja o README. Depois de `pnpm install`, os hooks do Git são instalados automaticamente e passam a validar mensagens de commit, formatação, lint e higiene do repositório.
 
+## Banco de dados
+
+- Toda mudança de esquema é uma migração nova em `supabase/migrations`; migrações publicadas não são editadas.
+- Toda tabela privada tem `owner_id`, RLS habilitada e forçada, uma política por operação e concessões explícitas por coluna quando a pessoa puder alterar dados. O teste-meta (`supabase/tests/meta.test.ts`) falha se alguma dessas regras faltar.
+- Cada tabela nova ganha testes positivos e negativos com as personas A e B (`supabase/tests/support/db.ts`).
+- Depois de mudar o esquema, rode `pnpm db:reset`, `pnpm test:db` e `pnpm db:types`, e versione o `src/data/database.ts` gerado. O CI confere se ele bate com o esquema.
+- Mudanças que alterem a resposta de algum requisito de segurança atualizam `docs/security/asvs.md`.
+
 ## Branches
 
 - `main` está sempre em estado aprovado. Só recebe etapas completas, por PR.
