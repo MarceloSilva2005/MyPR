@@ -11,10 +11,25 @@ const auth = vi.hoisted(() => ({
   signOut: vi.fn(),
 }));
 const cookieJar = vi.hoisted(() => new Map<string, string>());
+const limits = vi.hoisted(() => ({ allowed: true, checks: [] as unknown[] }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/server/supabase", () => ({
   createSupabaseServerClient: () => Promise.resolve({ auth }),
+}));
+vi.mock("@/server/rate-limit", () => ({
+  RATE_RULES: {
+    signInByAddress: "sign-in:ip",
+    signInByEmail: "sign-in:email",
+    signUpByAddress: "sign-up:ip",
+    emailByAddress: "email:ip",
+    emailByRecipient: "email:to",
+  },
+  clientAddress: () => Promise.resolve("203.0.113.7"),
+  withinRateLimits: (checks: unknown[]) => {
+    limits.checks.push(...checks);
+    return Promise.resolve(limits.allowed);
+  },
 }));
 vi.mock("next/headers", () => ({
   cookies: () =>
@@ -60,6 +75,30 @@ const providerError = (code: string) => ({ error: { code, message: `internal ${c
 beforeEach(() => {
   for (const fn of Object.values(auth)) fn.mockReset();
   cookieJar.clear();
+  limits.allowed = true;
+  limits.checks = [];
+});
+
+describe("rate limits", () => {
+  it("counts sign-in attempts per address and per e-mail", async () => {
+    auth.signInWithPassword.mockResolvedValue({ error: null });
+    await redirectOf(signIn(idle, form({ email: "A@b.co", password: "x" })));
+    expect(limits.checks).toEqual([
+      ["sign-in:ip", "203.0.113.7"],
+      ["sign-in:email", "a@b.co"],
+    ]);
+  });
+
+  it("stops before reaching the provider and says so neutrally", async () => {
+    limits.allowed = false;
+    const state = await signIn(idle, form({ email: "a@b.co", password: "x" }));
+    expect(state.message).toContain("Aguarde");
+    expect(auth.signInWithPassword).not.toHaveBeenCalled();
+
+    const reset = await requestPasswordReset(idle, form({ email: "a@b.co" }));
+    expect(reset.message).toContain("Aguarde");
+    expect(auth.resetPasswordForEmail).not.toHaveBeenCalled();
+  });
 });
 
 describe("signUp", () => {
