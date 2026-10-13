@@ -3,6 +3,7 @@
 import { shellCopy, type NavigationItem } from "@/content/navigation";
 import { Modal } from "@/ds/modal";
 import { NavLink } from "./nav-link";
+import { SignOutButton } from "./sign-out-button";
 
 /** Bottom sheet with the destinations that do not fit in the phone navigation bar. */
 export function MoreSheet({
@@ -32,6 +33,7 @@ export function MoreSheet({
             onNavigate={onClose}
           />
         ))}
+        <SignOutButton layout="sheet" />
       </nav>
     </Modal>
   );

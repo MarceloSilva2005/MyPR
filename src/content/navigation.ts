@@ -43,4 +43,5 @@ export const shellCopy = {
   startWorkout: "Iniciar treino",
   activeWorkout: "Treino em andamento",
   resumeWorkout: "Voltar ao treino",
+  signOut: "Sair",
 } as const;

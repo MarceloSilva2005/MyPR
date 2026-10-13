@@ -16,6 +16,7 @@ import { Wordmark } from "@/ds/brand";
 import { Button, ButtonLink } from "@/ds/button";
 import { useNow } from "@/ds/use-now";
 import { NavLink } from "./nav-link";
+import { SignOutButton } from "./sign-out-button";
 import { formatDuration } from "@/lib/format";
 
 // The sheet only matters on phones and only once opened, so its code is fetched on demand.
@@ -95,7 +96,10 @@ export function AppShell({
           ))}
         </nav>
 
-        <NavLink item={settingsNavigation} pathname={pathname} layout="sidebar" />
+        <div className="flex flex-col gap-1">
+          <NavLink item={settingsNavigation} pathname={pathname} layout="sidebar" />
+          <SignOutButton layout="sidebar" />
+        </div>
       </aside>
 
       <div className="flex min-w-0 flex-col pb-20 md:pb-0">

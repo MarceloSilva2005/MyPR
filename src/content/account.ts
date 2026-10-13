@@ -19,9 +19,6 @@ export const accountContent = {
     done: "As sessões nos outros dispositivos foram encerradas.",
   },
   currentPassword: "Senha atual",
-  signOut: "Sair",
-  signOutLabel: "Sair da conta",
-  signOutHint: "Encerra a sessão neste dispositivo.",
   errors: {
     currentPassword: "Informe a senha atual.",
     wrongPassword: "A senha atual não confere.",
