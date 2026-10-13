@@ -11,6 +11,37 @@ const PAGES = [
   { name: "shell com treino ativo", path: "/dev/shell?activeWorkout=1" },
 ];
 
+// Sign-in screens are seen without a session.
+const AUTH_PAGES = [
+  { name: "entrar", path: "/sign-in" },
+  { name: "criar conta", path: "/sign-up" },
+  { name: "confirme seu e-mail", path: "/check-email" },
+  { name: "recuperar acesso", path: "/forgot-password" },
+  { name: "nova senha sem link válido", path: "/reset-password" },
+  { name: "confirmação do link", path: "/auth/confirm?token_hash=abcdefgh123&type=email" },
+];
+
+for (const scheme of SCHEMES) {
+  test.describe(`acessibilidade das telas de acesso, tema ${scheme}`, () => {
+    test.use({ colorScheme: scheme, storageState: { cookies: [], origins: [] } });
+
+    for (const { name, path } of AUTH_PAGES) {
+      test(`${name} não tem violações WCAG 2.2 AA`, async ({ page }) => {
+        await page.goto(path);
+        await expectAccessible(page);
+      });
+    }
+
+    test("erros de validação do cadastro são acessíveis", async ({ page }) => {
+      await page.goto("/sign-up");
+      await page.getByRole("button", { name: "Criar conta" }).click();
+      await expect(page.getByText("Informe um nome com até 60 caracteres.")).toBeVisible();
+      await expect(page.getByLabel("Nome de exibição")).toBeFocused();
+      await expectAccessible(page);
+    });
+  });
+}
+
 for (const scheme of SCHEMES) {
   test.describe(`acessibilidade, tema ${scheme}`, () => {
     test.use({ colorScheme: scheme });
