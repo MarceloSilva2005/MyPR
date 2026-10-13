@@ -23,6 +23,15 @@ test.describe("navegação no desktop e no tablet", () => {
     );
   });
 
+  test("sair fica ao alcance em todas as páginas", async ({ page }) => {
+    for (const path of ["/app", "/app/history", "/app/settings"]) {
+      await page.goto(path);
+      await expect(
+        page.getByRole("complementary").getByRole("button", { name: "Sair" }),
+      ).toBeVisible();
+    }
+  });
+
   test("navega entre as áreas e marca a área atual", async ({ page }) => {
     await page.goto("/app");
     const nav = page.getByRole("navigation", { name: "Navegação principal" });
@@ -75,6 +84,8 @@ test.describe("navegação no celular", () => {
       "Analytics",
       "Configurações",
     ]);
+    // Signing out is reachable from every page (pressing it would end the shared test session).
+    await expect(sheet.getByRole("button", { name: "Sair" })).toBeVisible();
 
     await sheet.getByRole("link", { name: "Recordes" }).click();
     await expect(page).toHaveURL(/\/app\/records$/);
