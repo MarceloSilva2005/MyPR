@@ -52,8 +52,8 @@ interface HumanCheckProps {
 }
 
 /**
- * Cloudflare Turnstile. It usually completes on its own; when it needs the
- * person, it shows its own accessible challenge. The token travels with the
+ * Cloudflare Turnstile. It usually completes on its own without showing
+ * anything; when it needs the person, it shows its own accessible challenge. The token travels with the
  * form in the field the widget adds.
  */
 export function HumanCheck({ siteKey, action, resetSignal }: HumanCheckProps) {
@@ -72,6 +72,8 @@ export function HumanCheck({ siteKey, action, resetSignal }: HumanCheckProps) {
           language: "pt-br",
           theme: "auto",
           size: "flexible",
+          // Shown only when Cloudflare needs the person; usually it passes unseen.
+          appearance: "interaction-only",
         });
       })
       .catch(() => {
@@ -90,8 +92,7 @@ export function HumanCheck({ siteKey, action, resetSignal }: HumanCheckProps) {
 
   return (
     <div role="group" aria-label={authContent.humanCheckLabel}>
-      {/* Keeps the widget's height reserved so the form does not move when it appears. */}
-      <div ref={container} className="min-h-16" />
+      <div ref={container} />
       {failed ? (
         <InlineAlert tone="warning">{authContent.humanCheckUnavailable}</InlineAlert>
       ) : null}
