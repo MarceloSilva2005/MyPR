@@ -27,6 +27,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
+      - uses: ./.github/actions/local-supabase
       - run: pnpm build
       - name: Generate screenshots
         run: pnpm exec playwright test e2e/visual.spec.ts --update-snapshots
