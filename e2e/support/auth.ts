@@ -5,7 +5,7 @@ const MAILPIT = process.env["MAILPIT_URL"] ?? "http://127.0.0.1:54324";
 
 /** Account shared by the tests that only need to be signed in. Test values only. */
 export const sharedAccount = {
-  displayName: "Pessoa de teste",
+  displayName: "Joana Prado",
   email: "pessoa@example.test",
   password: "frase de teste longa",
 };

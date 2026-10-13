@@ -7,6 +7,7 @@ import { messageForAuthError, revealsAccount } from "./errors";
 import { fieldErrors, readFields, type AuthFormState } from "./form-state";
 import { rememberPendingEmail } from "./pending-email";
 import { authContent } from "@/content/auth";
+import { usesContextWords } from "@/domain/password";
 import { safeRedirectPath } from "@/lib/redirect";
 import { AUTH_ROUTES } from "@/lib/routes";
 import { emailOnlySchema, newPasswordSchema, signInSchema, signUpSchema } from "@/schemas/auth";
@@ -45,6 +46,10 @@ export async function signUp(
         password: errors.password,
       }),
     };
+  }
+
+  if (usesContextWords(parsed.data.password, parsed.data)) {
+    return { status: "error", values, fieldErrors: { password: errors.contextPassword } };
   }
 
   const humanCheck = await humanCheckFailure(form, "sign-up");
@@ -207,6 +212,11 @@ export async function updatePassword(
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase.auth.getClaims();
   if (!data) return { status: "error", message: authContent.resetPassword.expired };
+
+  const email = typeof data.claims.email === "string" ? data.claims.email : "";
+  if (usesContextWords(parsed.data.password, { email })) {
+    return { status: "error", fieldErrors: { password: errors.contextPassword } };
+  }
 
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
   if (error) {

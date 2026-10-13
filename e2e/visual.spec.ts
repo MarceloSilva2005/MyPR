@@ -100,7 +100,7 @@ for (const scheme of SCHEMES) {
       );
       await context.setExtraHTTPHeaders({ "x-real-ip": uniqueAddress() });
       const email = uniqueEmail("visual");
-      await signUp(page, { displayName: "Visual", email, password: "frase longa visual" });
+      await signUp(page, { displayName: "Lia", email, password: "frase longa de imagem" });
       await confirmFromEmail(page, email);
       await page.getByRole("button", { name: "Começar" }).click();
       await page.evaluate(() => document.fonts.ready);

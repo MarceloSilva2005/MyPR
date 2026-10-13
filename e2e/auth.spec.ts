@@ -80,7 +80,7 @@ test.describe("cadastro e confirmação", () => {
 
   test("um e-mail já cadastrado recebe a mesma resposta de um novo", async ({ page }) => {
     await signUp(page, {
-      displayName: "Outra pessoa",
+      displayName: "Rita Lopes",
       email: sharedAccount.email,
       password: "outra frase qualquer",
     });

@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { accountContent } from "@/content/account";
 import { authContent } from "@/content/auth";
+import { usesContextWords } from "@/domain/password";
 import { messageForAuthError } from "@/features/auth/errors";
 import { readFields, type AuthFormState } from "@/features/auth/form-state";
 import { newPasswordSchema } from "@/schemas/auth";
@@ -39,7 +40,12 @@ export async function changePassword(
   }
   const next = newPasswordSchema.safeParse({ password: raw.password });
   if (!next.success) fieldErrors.password = authContent.errors.password;
-  if (!next.success || fieldErrors.currentPassword) return { status: "error", fieldErrors };
+  else if (usesContextWords(next.data.password, { email: user.email })) {
+    fieldErrors.password = authContent.errors.contextPassword;
+  }
+  if (!next.success || fieldErrors.currentPassword || fieldErrors.password) {
+    return { status: "error", fieldErrors };
+  }
 
   const reauth = await confirmPassword(user, raw.currentPassword);
   if (!reauth.ok) return { status: "error", ...reauthFailure(reauth) };
