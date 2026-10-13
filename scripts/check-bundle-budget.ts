@@ -1,10 +1,11 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 
 import {
   checkBudget,
   formatKilobytes,
   gzipBytes,
+  heaviestOnDemand,
   routeScripts,
   type BudgetResult,
 } from "./lib/bundle-budget.ts";
@@ -14,9 +15,29 @@ import {
  * Limits are deliberately tight for pages that carry no product logic yet; raise them only with a
  * recorded reason.
  */
-const BUDGETS: readonly { route: string; manifest: string; key: string; limitKb: number }[] = [
+interface Budget {
+  route: string;
+  manifest: string;
+  key: string;
+  limitKb: number;
+  /**
+   * The route renders one of its on-demand chunks right away (the onboarding steps), so the
+   * heaviest of them is part of the first visit. Chunks loaded after an interaction, such as the
+   * "Mais" sheet of the shell, are not.
+   */
+  rendersOnDemand?: boolean;
+}
+
+const BUDGETS: readonly Budget[] = [
   { route: "/", manifest: "page", key: "/page", limitKb: 145 },
-  { route: "/app", manifest: "app/page", key: "/app/page", limitKb: 175 },
+  { route: "/app", manifest: "app/(shell)/page", key: "/app/(shell)/page", limitKb: 175 },
+  {
+    route: "/app/onboarding",
+    manifest: "app/onboarding/page",
+    key: "/app/onboarding/page",
+    limitKb: 175,
+    rendersOnDemand: true,
+  },
 ];
 
 interface ClientManifest {
@@ -38,13 +59,26 @@ function entryFiles(manifest: string, key: string): Record<string, string[]> {
   return files;
 }
 
-const results: BudgetResult[] = BUDGETS.map(({ route, manifest, key, limitKb }) => {
-  const bytes = routeScripts(rootMainFiles, entryFiles(manifest, key)).reduce(
-    (total, file) => total + gzipBytes(readFileSync(`.next/${file}`)),
-    0,
-  );
-  return checkBudget(route, bytes, limitKb * 1024);
-});
+// Imports through next/dynamic, listed per route by the build.
+function onDemandFiles(manifest: string): string[][] {
+  const path = `.next/server/app/${manifest}/react-loadable-manifest.json`;
+  if (!existsSync(path)) return [];
+  const entries = JSON.parse(readFileSync(path, "utf8")) as Record<string, { files: string[] }>;
+  return Object.values(entries).map((entry) => entry.files);
+}
+
+const sizeOf = (file: string) => gzipBytes(readFileSync(`.next/${file}`));
+
+const results: BudgetResult[] = BUDGETS.map(
+  ({ route, manifest, key, limitKb, rendersOnDemand }) => {
+    const scripts = routeScripts(rootMainFiles, entryFiles(manifest, key));
+    const onDemand = rendersOnDemand
+      ? heaviestOnDemand(scripts, onDemandFiles(manifest), sizeOf)
+      : 0;
+    const bytes = scripts.reduce((total, file) => total + sizeOf(file), 0) + onDemand;
+    return checkBudget(route, bytes, limitKb * 1024);
+  },
+);
 
 for (const result of results) {
   const status = result.ok ? "ok" : "OVER BUDGET";

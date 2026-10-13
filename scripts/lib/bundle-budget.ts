@@ -14,6 +14,26 @@ export function routeScripts(
   return [...new Set([...rootMainFiles, ...Object.values(entryFiles).flat()])];
 }
 
+/**
+ * Chunks a route may load on demand (`next/dynamic`), as lists of files per import. Only one of
+ * them is assumed at a time, the heaviest, so the budget covers the worst first visit.
+ */
+export function heaviestOnDemand(
+  alreadyLoaded: readonly string[],
+  onDemand: readonly (readonly string[])[],
+  sizeOf: (file: string) => number,
+): number {
+  const loaded = new Set(alreadyLoaded);
+  return Math.max(
+    0,
+    ...onDemand.map((files) =>
+      [...new Set(files)]
+        .filter((file) => !loaded.has(file))
+        .reduce((sum, file) => sum + sizeOf(file), 0),
+    ),
+  );
+}
+
 export function gzipBytes(content: Uint8Array): number {
   return gzipSync(content).length;
 }
