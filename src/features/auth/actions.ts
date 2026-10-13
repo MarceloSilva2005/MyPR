@@ -10,6 +10,7 @@ import { authContent } from "@/content/auth";
 import { safeRedirectPath } from "@/lib/redirect";
 import { AUTH_ROUTES } from "@/lib/routes";
 import { emailOnlySchema, newPasswordSchema, signInSchema, signUpSchema } from "@/schemas/auth";
+import { clientAddress, RATE_RULES, withinRateLimits } from "@/server/rate-limit";
 import { createSupabaseServerClient } from "@/server/supabase";
 
 // Next.js rejects Server Actions whose Origin differs from the host, which
@@ -36,6 +37,10 @@ export async function signUp(
         password: errors.password,
       }),
     };
+  }
+
+  if (!(await withinRateLimits([[RATE_RULES.signUpByAddress, await clientAddress()]]))) {
+    return { status: "error", values, message: errors.rateLimited };
   }
 
   const supabase = await createSupabaseServerClient();
@@ -77,6 +82,12 @@ export async function signIn(
     };
   }
 
+  const allowed = await withinRateLimits([
+    [RATE_RULES.signInByAddress, await clientAddress()],
+    [RATE_RULES.signInByEmail, parsed.data.email],
+  ]);
+  if (!allowed) return { status: "error", values, message: errors.rateLimited };
+
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) {
@@ -97,6 +108,14 @@ export async function signOut(): Promise<void> {
 
 type EmailField = "email";
 
+// Applies to every e-mail sent on request, counted per sender and per recipient.
+async function withinEmailLimits(email: string): Promise<boolean> {
+  return withinRateLimits([
+    [RATE_RULES.emailByAddress, await clientAddress()],
+    [RATE_RULES.emailByRecipient, email],
+  ]);
+}
+
 export async function resendConfirmation(
   _previous: AuthFormState<EmailField>,
   form: FormData,
@@ -105,6 +124,10 @@ export async function resendConfirmation(
   const parsed = emailOnlySchema.safeParse(raw);
   if (!parsed.success) {
     return { status: "error", values: raw, fieldErrors: { email: errors.email } };
+  }
+
+  if (!(await withinEmailLimits(parsed.data.email))) {
+    return { status: "error", values: raw, message: errors.rateLimited };
   }
 
   const supabase = await createSupabaseServerClient();
@@ -123,6 +146,10 @@ export async function requestPasswordReset(
   const parsed = emailOnlySchema.safeParse(raw);
   if (!parsed.success) {
     return { status: "error", values: raw, fieldErrors: { email: errors.email } };
+  }
+
+  if (!(await withinEmailLimits(parsed.data.email))) {
+    return { status: "error", values: raw, message: errors.rateLimited };
   }
 
   const supabase = await createSupabaseServerClient();

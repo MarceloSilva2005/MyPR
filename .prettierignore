@@ -4,3 +4,4 @@ reports
 node_modules
 pnpm-lock.yaml
 *.md
+src/data/database.ts

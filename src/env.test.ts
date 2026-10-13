@@ -6,6 +6,7 @@ describe("parseSupabaseEnv", () => {
   const valid = {
     SUPABASE_URL: "http://127.0.0.1:54321",
     SUPABASE_PUBLISHABLE_KEY: "sb_publishable_local",
+    RATE_LIMIT_SECRET: "r".repeat(32),
   };
 
   it("accepts the local stack", () => {
@@ -14,7 +15,7 @@ describe("parseSupabaseEnv", () => {
 
   it("names every missing variable without echoing values", () => {
     expect(() => parseSupabaseEnv({ SUPABASE_URL: "ftp://secret-host" })).toThrow(
-      /SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY/,
+      /SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, RATE_LIMIT_SECRET/,
     );
     expect(() => parseSupabaseEnv({ SUPABASE_URL: "ftp://secret-host" })).not.toThrow(
       /secret-host/,

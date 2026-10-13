@@ -30,7 +30,15 @@ const allow = (from, to) => ({
 
 export default tseslint.config(
   {
-    ignores: [".next/**", "node_modules/**", "coverage/**", "reports/**", "next-env.d.ts"],
+    // src/data/database.ts is generated from the database schema (pnpm db:types).
+    ignores: [
+      ".next/**",
+      "node_modules/**",
+      "coverage/**",
+      "reports/**",
+      "next-env.d.ts",
+      "src/data/database.ts",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,

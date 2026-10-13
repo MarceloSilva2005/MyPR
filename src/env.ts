@@ -40,6 +40,8 @@ const supabaseSchema = z.object({
   SUPABASE_URL: z.url({ protocol: /^https?$/ }),
   // Publishable (anon) key. Row level security protects every private table.
   SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
+  // Keys the rate limit counters (src/server/rate-limit.ts). At least 32 characters.
+  RATE_LIMIT_SECRET: z.string().min(32),
 });
 
 export type SupabaseEnv = z.infer<typeof supabaseSchema>;
