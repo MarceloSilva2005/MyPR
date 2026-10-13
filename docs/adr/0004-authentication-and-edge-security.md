@@ -26,4 +26,12 @@ O produto é uma aplicação web pública com dados pessoais de hábitos de trei
 ## Consequências
 
 - A entregabilidade de e-mail depende de domínio próprio com SPF, DKIM e DMARC antes do beta.
-- Nonce exige renderização dinâmica; a página pública estática usará política por hashes. A validação é a tarefa T2.3.
+- Nonce exige renderização dinâmica; a página pública estática usaria política por hashes. A validação é a tarefa T2.3.
+
+## Resultado da validação (T2.3, 13/10/2026)
+
+A política por hashes não se sustenta: o Next.js insere em cada página scripts inline com os dados de renderização, diferentes por rota e por build, e a integridade de sub-recursos experimental cobre apenas arquivos externos. Manter a página pública estática exigiria `'unsafe-inline'` em `script-src`, o que anula a proteção.
+
+Decisão: **todas as páginas são renderizadas por requisição com nonce**. O proxy gera 128 bits aleatórios por requisição e envia a política; o layout raiz lê o nonce e o aplica ao script de tema e à meta `csp-nonce`, de onde o React Aria lê o valor para os estilos que injeta. `style-src-attr 'unsafe-inline'` permanece porque o posicionamento de popovers e a geometria dos gráficos usam atributos `style`; atributo de estilo não executa código.
+
+Custo: a página pública deixa de ser servida do cache da CDN. O tempo de resposta passa a ser medido na E6, com o resto do orçamento de desempenho. O orçamento de JavaScript continua o mesmo e passou a ser medido pelos manifestos do build, já que não há mais HTML pré-renderizado.

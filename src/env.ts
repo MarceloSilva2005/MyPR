@@ -33,3 +33,30 @@ export function getEnv(): Env {
   cached ??= parseEnv(process.env);
   return cached;
 }
+
+// Read only by server code that talks to Supabase, so public pages and the
+// design gallery keep working without a database.
+const supabaseSchema = z.object({
+  SUPABASE_URL: z.url({ protocol: /^https?$/ }),
+  // Publishable (anon) key. Row level security protects every private table.
+  SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
+  // Public address of this site, used in e-mail links and origin checks.
+  APP_URL: z.url({ protocol: /^https?$/ }).default("http://localhost:3000"),
+});
+
+export type SupabaseEnv = z.infer<typeof supabaseSchema>;
+
+export function parseSupabaseEnv(source: Record<string, string | undefined>): SupabaseEnv {
+  const result = supabaseSchema.safeParse(source);
+  if (result.success) return result.data;
+
+  const names = [...new Set(result.error.issues.map((issue) => issue.path.join(".")))];
+  throw new Error(`Invalid Supabase configuration: ${names.join(", ")}`);
+}
+
+let cachedSupabase: SupabaseEnv | undefined;
+
+export function getSupabaseEnv(): SupabaseEnv {
+  cachedSupabase ??= parseSupabaseEnv(process.env);
+  return cachedSupabase;
+}
