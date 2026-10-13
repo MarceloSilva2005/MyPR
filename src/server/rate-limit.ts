@@ -20,6 +20,7 @@ export const RATE_RULES = {
   signUpByAddress: { name: "sign-up:ip", max: 5, windowSeconds: 60 * 60 },
   emailByAddress: { name: "email:ip", max: 5, windowSeconds: 15 * 60 },
   emailByRecipient: { name: "email:to", max: 3, windowSeconds: 60 * 60 },
+  reauthByAccount: { name: "reauth:account", max: 5, windowSeconds: 15 * 60 },
 } as const satisfies Record<string, RateRule>;
 
 /**
