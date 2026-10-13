@@ -40,8 +40,6 @@ const supabaseSchema = z.object({
   SUPABASE_URL: z.url({ protocol: /^https?$/ }),
   // Publishable (anon) key. Row level security protects every private table.
   SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
-  // Public address of this site, used in e-mail links and origin checks.
-  APP_URL: z.url({ protocol: /^https?$/ }).default("http://localhost:3000"),
 });
 
 export type SupabaseEnv = z.infer<typeof supabaseSchema>;
