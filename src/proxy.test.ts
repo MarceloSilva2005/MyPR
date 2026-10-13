@@ -29,13 +29,15 @@ vi.mock("@supabase/ssr", () => ({
     },
   ) => ({
     auth: {
-      getClaims: () => {
+      getUser: () => {
         if (session.refreshed) {
           options.cookies.setAll([{ name: "sb-auth", value: "fresh", options: {} }], {
             "Cache-Control": "private, no-store",
           });
         }
-        return Promise.resolve({ data: session.claims ? { claims: session.claims } : null });
+        return Promise.resolve({
+          data: { user: session.claims ? { id: session.claims.sub } : null },
+        });
       },
     },
   }),

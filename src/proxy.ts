@@ -46,9 +46,11 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
       },
     });
 
-    // Validates the token; never trust the cookie contents on their own.
-    const { data } = await supabase.auth.getClaims();
-    const signedIn = Boolean(data?.claims.sub);
+    // Asks the auth server, so a session ended on another device stops working
+    // at once instead of when its access token expires. Never trust the cookie
+    // contents on their own.
+    const { data } = await supabase.auth.getUser();
+    const signedIn = Boolean(data.user);
 
     if (!signedIn && isPrivatePath(pathname)) {
       const target = new URL(AUTH_ROUTES.signIn, request.url);
