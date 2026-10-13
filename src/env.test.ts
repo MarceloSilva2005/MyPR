@@ -1,6 +1,26 @@
 import { describe, expect, it } from "vitest";
 
-import { parseEnv } from "./env";
+import { parseEnv, parseSupabaseEnv } from "./env";
+
+describe("parseSupabaseEnv", () => {
+  const valid = {
+    SUPABASE_URL: "http://127.0.0.1:54321",
+    SUPABASE_PUBLISHABLE_KEY: "sb_publishable_local",
+  };
+
+  it("defaults the site address to the development server", () => {
+    expect(parseSupabaseEnv(valid).APP_URL).toBe("http://localhost:3000");
+  });
+
+  it("names every missing variable without echoing values", () => {
+    expect(() => parseSupabaseEnv({ SUPABASE_URL: "ftp://secret-host" })).toThrow(
+      /SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY/,
+    );
+    expect(() => parseSupabaseEnv({ SUPABASE_URL: "ftp://secret-host" })).not.toThrow(
+      /secret-host/,
+    );
+  });
+});
 
 describe("parseEnv", () => {
   it("falls back to safe defaults when nothing is set", () => {
