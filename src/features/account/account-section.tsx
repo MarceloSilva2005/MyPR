@@ -5,7 +5,7 @@ import { signOut } from "@/features/auth/actions";
 
 export function AccountSection({ email }: { email: string }) {
   return (
-    <section aria-labelledby="account-title" className="space-y-5">
+    <section aria-labelledby="account-title" className="space-y-6">
       <h2 id="account-title" className="text-base font-medium tracking-tight">
         {accountContent.title}
       </h2>
