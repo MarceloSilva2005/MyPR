@@ -27,7 +27,8 @@ export function buildContentSecurityPolicy({ nonce, development }: CspOptions): 
     ["connect-src", "'self'"],
     ["worker-src", "'self'"],
     ["manifest-src", "'self'"],
-    ["frame-src", "'none'"],
+    // Cloudflare Turnstile renders its check in a frame (sign-up, recovery, sign-in).
+    ["frame-src", "https://challenges.cloudflare.com"],
     ["object-src", "'none'"],
     ["base-uri", "'none'"],
     ["form-action", "'self'"],

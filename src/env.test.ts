@@ -7,6 +7,8 @@ describe("parseSupabaseEnv", () => {
     SUPABASE_URL: "http://127.0.0.1:54321",
     SUPABASE_PUBLISHABLE_KEY: "sb_publishable_local",
     RATE_LIMIT_SECRET: "r".repeat(32),
+    TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
+    TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
   };
 
   it("accepts the local stack", () => {
@@ -15,11 +17,26 @@ describe("parseSupabaseEnv", () => {
 
   it("names every missing variable without echoing values", () => {
     expect(() => parseSupabaseEnv({ SUPABASE_URL: "ftp://secret-host" })).toThrow(
-      /SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, RATE_LIMIT_SECRET/,
+      /SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, RATE_LIMIT_SECRET, TURNSTILE_SITE_KEY/,
     );
     expect(() => parseSupabaseEnv({ SUPABASE_URL: "ftp://secret-host" })).not.toThrow(
       /secret-host/,
     );
+  });
+});
+
+describe("parseSupabaseEnv in production", () => {
+  it("refuses the public Turnstile test keys", () => {
+    expect(() =>
+      parseSupabaseEnv({
+        APP_ENV: "production",
+        SUPABASE_URL: "https://example.supabase.co",
+        SUPABASE_PUBLISHABLE_KEY: "sb_publishable_x",
+        RATE_LIMIT_SECRET: "r".repeat(32),
+        TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
+        TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
+      }),
+    ).toThrow("TURNSTILE_SECRET_KEY");
   });
 });
 

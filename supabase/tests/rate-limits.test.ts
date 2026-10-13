@@ -98,4 +98,23 @@ describe("consume_rate_limit", () => {
       await db.rejects("select * from public.rate_limits", [], UNDEFINED_TABLE);
     });
   });
+
+  it("can be read without counting an attempt", async () => {
+    await withPersonas(client, async (db) => {
+      await db.as("anon");
+      const peek = async () =>
+        (
+          await db.query<{ hits: number }>("select public.peek_rate_limit($1, 60) as hits", [
+            bucketA,
+          ])
+        ).rows[0]?.hits;
+
+      expect(await peek()).toBe(0);
+      await consume(db, bucketA);
+      await consume(db, bucketA);
+      expect(await peek()).toBe(2);
+      expect(await peek()).toBe(2);
+      await db.rejects("select public.peek_rate_limit('x', 60)", [], INVALID_PARAMETER);
+    });
+  });
 });

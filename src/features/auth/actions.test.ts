@@ -11,7 +11,18 @@ const auth = vi.hoisted(() => ({
   signOut: vi.fn(),
 }));
 const cookieJar = vi.hoisted(() => new Map<string, string>());
-const limits = vi.hoisted(() => ({ allowed: true, checks: [] as unknown[] }));
+const limits = vi.hoisted(() => ({
+  allowed: true,
+  reached: false,
+  checks: [] as unknown[],
+}));
+const human = vi.hoisted(() => {
+  const state: { result: "passed" | "missing" | "failed" | "unavailable"; actions: string[] } = {
+    result: "passed",
+    actions: [],
+  };
+  return state;
+});
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/server/supabase", () => ({
@@ -24,11 +35,21 @@ vi.mock("@/server/rate-limit", () => ({
     signUpByAddress: "sign-up:ip",
     emailByAddress: "email:ip",
     emailByRecipient: "email:to",
+    signInFailuresByEmail: "sign-in-failed:email",
+    signInFailuresByAddress: "sign-in-failed:ip",
   },
+  anyLimitReached: () => Promise.resolve(limits.reached),
   clientAddress: () => Promise.resolve("203.0.113.7"),
   withinRateLimits: (checks: unknown[]) => {
     limits.checks.push(...checks);
     return Promise.resolve(limits.allowed);
+  },
+}));
+vi.mock("@/server/turnstile", () => ({
+  TURNSTILE_FIELD: "cf-turnstile-response",
+  verifyHuman: (_token: unknown, action: string) => {
+    human.actions.push(action);
+    return Promise.resolve(human.result);
   },
 }));
 vi.mock("next/headers", () => ({
@@ -76,7 +97,53 @@ beforeEach(() => {
   for (const fn of Object.values(auth)) fn.mockReset();
   cookieJar.clear();
   limits.allowed = true;
+  limits.reached = false;
   limits.checks = [];
+  human.result = "passed";
+  human.actions = [];
+});
+
+describe("human check", () => {
+  it("is required to create an account", async () => {
+    human.result = "missing";
+    const data = form({ displayName: "Ana", email: "a@b.co", password: "frase longa" });
+    const state = await signUp(idle, data);
+
+    expect(state.message).toBe("Conclua a verificação de segurança e envie de novo.");
+    expect(human.actions).toEqual(["sign-up"]);
+    expect(auth.signUp).not.toHaveBeenCalled();
+  });
+
+  it("is required to request a password reset", async () => {
+    human.result = "failed";
+    const state = await requestPasswordReset(idle, form({ email: "a@b.co" }));
+    expect(state.status).toBe("error");
+    expect(auth.resetPasswordForEmail).not.toHaveBeenCalled();
+  });
+
+  it("is not asked on a first sign-in", async () => {
+    human.result = "missing";
+    auth.signInWithPassword.mockResolvedValue({ error: null });
+    await redirectOf(signIn(idle, form({ email: "a@b.co", password: "x" })));
+    expect(human.actions).toEqual([]);
+  });
+
+  it("is asked on sign-in after repeated failures", async () => {
+    limits.reached = true;
+    human.result = "missing";
+    const state = await signIn(idle, form({ email: "a@b.co", password: "x" }));
+
+    expect(state.humanCheck).toBe(true);
+    expect(human.actions).toEqual(["sign-in"]);
+    expect(auth.signInWithPassword).not.toHaveBeenCalled();
+  });
+
+  it("counts a wrong password as a failure for the e-mail and the address", async () => {
+    auth.signInWithPassword.mockResolvedValue(providerError("invalid_credentials"));
+    await signIn(idle, form({ email: "a@b.co", password: "x" }));
+    expect(limits.checks).toContainEqual(["sign-in-failed:email", "a@b.co"]);
+    expect(limits.checks).toContainEqual(["sign-in-failed:ip", "203.0.113.7"]);
+  });
 });
 
 describe("rate limits", () => {

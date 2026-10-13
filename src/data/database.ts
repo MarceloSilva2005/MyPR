@@ -27,6 +27,9 @@ export type Database = {
           Functions: {
             "consume_rate_limit":
 { Args: { "bucket": string,"max_hits": number,"window_seconds": number }; Returns: boolean
+                           },
+"peek_rate_limit":
+{ Args: { "bucket": string,"window_seconds": number }; Returns: number
                            }
           }
           Enums: {

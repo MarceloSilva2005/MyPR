@@ -42,12 +42,24 @@ const supabaseSchema = z.object({
   SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
   // Keys the rate limit counters (src/server/rate-limit.ts). At least 32 characters.
   RATE_LIMIT_SECRET: z.string().min(32),
+  // Cloudflare Turnstile. Development and CI use the public test keys.
+  TURNSTILE_SITE_KEY: z.string().min(1),
+  TURNSTILE_SECRET_KEY: z.string().min(1),
 });
+
+// Cloudflare's published test keys start with 1x, 2x or 3x followed by zeros.
+const TURNSTILE_TEST_KEY = /^[123]x0{10}/;
 
 export type SupabaseEnv = z.infer<typeof supabaseSchema>;
 
 export function parseSupabaseEnv(source: Record<string, string | undefined>): SupabaseEnv {
-  const result = supabaseSchema.safeParse(source);
+  const result = supabaseSchema
+    .refine(
+      (env) =>
+        source["APP_ENV"] !== "production" || !TURNSTILE_TEST_KEY.test(env.TURNSTILE_SECRET_KEY),
+      { path: ["TURNSTILE_SECRET_KEY"], message: "test key in production" },
+    )
+    .safeParse(source);
   if (result.success) return result.data;
 
   const names = [...new Set(result.error.issues.map((issue) => issue.path.join(".")))];

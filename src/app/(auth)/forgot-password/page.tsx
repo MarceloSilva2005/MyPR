@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { authContent } from "@/content/auth";
+import { getSupabaseEnv } from "@/env";
 import { InlineAlert } from "@/ds/feedback";
 import { Link } from "@/ds/link";
 import { AuthHeader } from "@/features/auth/auth-header";
@@ -23,7 +24,7 @@ export default async function ForgotPasswordPage({
       {status === "link-expired" ? (
         <InlineAlert tone="warning">{authContent.resetPassword.expired}</InlineAlert>
       ) : null}
-      <ForgotPasswordForm />
+      <ForgotPasswordForm siteKey={getSupabaseEnv().TURNSTILE_SITE_KEY} />
       <Link href={AUTH_ROUTES.signIn} className="self-start text-sm">
         {copy.back}
       </Link>

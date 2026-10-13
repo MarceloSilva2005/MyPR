@@ -1,5 +1,11 @@
 import { expect, expectAccessible, test } from "./fixtures";
-import { confirmFromEmail, signUp, uniqueAddress, uniqueEmail } from "./support/auth";
+import {
+  confirmFromEmail,
+  passHumanCheck,
+  signUp,
+  uniqueAddress,
+  uniqueEmail,
+} from "./support/auth";
 
 const SCHEMES = ["light", "dark"] as const;
 
@@ -35,6 +41,7 @@ for (const scheme of SCHEMES) {
 
     test("erros de validação do cadastro são acessíveis", async ({ page }) => {
       await page.goto("/sign-up");
+      await passHumanCheck(page);
       await page.getByRole("button", { name: "Criar conta" }).click();
       await expect(page.getByText("Informe um nome com até 60 caracteres.")).toBeVisible();
       await expect(page.getByLabel("Nome de exibição")).toBeFocused();

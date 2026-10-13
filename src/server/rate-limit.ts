@@ -21,6 +21,9 @@ export const RATE_RULES = {
   emailByAddress: { name: "email:ip", max: 5, windowSeconds: 15 * 60 },
   emailByRecipient: { name: "email:to", max: 3, windowSeconds: 60 * 60 },
   reauthByAccount: { name: "reauth:account", max: 5, windowSeconds: 15 * 60 },
+  // Failed sign-ins; past `max`, sign-in asks for the human check.
+  signInFailuresByEmail: { name: "sign-in-failed:email", max: 3, windowSeconds: 15 * 60 },
+  signInFailuresByAddress: { name: "sign-in-failed:ip", max: 3, windowSeconds: 15 * 60 },
 } as const satisfies Record<string, RateRule>;
 
 /**
@@ -60,4 +63,27 @@ export async function withinRateLimits(
     }),
   );
   return results.every(Boolean);
+}
+
+/**
+ * Whether any of the counters already reached its limit, without counting a
+ * new attempt. Fails open like the limiter: the check is a deterrent on top of
+ * the limits that still apply.
+ */
+export async function anyLimitReached(
+  checks: readonly (readonly [RateRule, string])[],
+): Promise<boolean> {
+  const { RATE_LIMIT_SECRET } = getSupabaseEnv();
+  const supabase = await createSupabaseServerClient();
+
+  const results = await Promise.all(
+    checks.map(async ([rule, subject]) => {
+      const { data, error } = await supabase.rpc("peek_rate_limit", {
+        bucket: rateBucket(rule, subject, RATE_LIMIT_SECRET),
+        window_seconds: rule.windowSeconds,
+      });
+      return !error && data >= rule.max;
+    }),
+  );
+  return results.some(Boolean);
 }

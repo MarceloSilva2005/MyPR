@@ -7,6 +7,8 @@ export interface AuthFormState<Field extends string> {
   readonly fieldErrors?: Partial<Record<Field, string>>;
   /** Values echoed back so a failed submit never clears the form. Never passwords. */
   readonly values?: Partial<Record<Field, string>>;
+  /** The next submit must include the human check (see src/server/turnstile.ts). */
+  readonly humanCheck?: boolean;
 }
 
 export const idle = { status: "idle" } as const;
