@@ -49,7 +49,11 @@ const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 
 /** Fails with a readable summary when axe finds any WCAG 2.2 AA violation. */
 export async function expectAccessible(page: Page, selectors: string[] = []): Promise<void> {
-  let builder = new AxeBuilder({ page }).withTags(WCAG_TAGS);
+  // React Aria's visually hidden live region keeps each announcement for a few seconds. One that
+  // points at a button's label stays there after that button is gone (for example after a form
+  // moves to its next step), which axe reports as an image without text. Screen readers have
+  // already read it by then, so the region is left out of the scan.
+  let builder = new AxeBuilder({ page }).withTags(WCAG_TAGS).exclude("[data-live-announcer]");
   for (const selector of selectors) builder = builder.include(selector);
   const { violations } = await builder.analyze();
 

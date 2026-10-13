@@ -1,5 +1,6 @@
 import { expect, test } from "./fixtures";
 import {
+  completeOnboarding,
   confirmFromEmail,
   emailLink,
   sharedAccount,
@@ -49,7 +50,8 @@ test.describe("cadastro e confirmação", () => {
     await page.goto(link);
     await expect(page.getByRole("button", { name: "Confirmar e-mail" })).toBeVisible();
     await page.getByRole("button", { name: "Confirmar e-mail" }).click();
-    await expect(page).toHaveURL(/\/app\?status=confirmed$/);
+    await expect(page).toHaveURL(/\/app\/onboarding$/);
+    await completeOnboarding(page);
 
     await page.goto("/app/settings");
     await expect(page.getByText(email)).toBeVisible();
@@ -121,6 +123,7 @@ test.describe("recuperação de senha", () => {
     const email = uniqueEmail("recupera");
     await signUp(page, { displayName: "Davi", email, password: "frase antiga longa" });
     await confirmFromEmail(page, email);
+    await completeOnboarding(page);
     await page.context().clearCookies();
 
     await page.goto("/forgot-password");
@@ -137,7 +140,8 @@ test.describe("recuperação de senha", () => {
 
     await page.getByLabel("Nova senha", { exact: true }).fill("frase nova bem longa");
     await page.getByRole("button", { name: "Salvar nova senha" }).click();
-    await expect(page).toHaveURL(/\/app\?status=password-updated$/);
+    await expect(page.getByText("Senha atualizada.")).toBeVisible();
+    await expect(page).toHaveURL(/\/app$/);
 
     await page.context().clearCookies();
     await page.goto("/sign-in");

@@ -1,4 +1,5 @@
 import { expect, expectAccessible, test } from "./fixtures";
+import { confirmFromEmail, signUp, uniqueAddress, uniqueEmail } from "./support/auth";
 
 const SCHEMES = ["light", "dark"] as const;
 
@@ -93,3 +94,24 @@ test.describe("estados interativos", () => {
     await expectAccessible(page, ["#exercise-picker", '[role="listbox"]']);
   });
 });
+
+for (const scheme of SCHEMES) {
+  test.describe(`acessibilidade do onboarding, tema ${scheme}`, () => {
+    test.use({ colorScheme: scheme, storageState: { cookies: [], origins: [] } });
+
+    test("cada passo não tem violações WCAG 2.2 AA", async ({ page, context }, testInfo) => {
+      test.skip(testInfo.project.name === "tablet", "Coberto no desktop e no celular.");
+      await context.setExtraHTTPHeaders({ "x-real-ip": uniqueAddress() });
+      const email = uniqueEmail("a11y");
+      await signUp(page, { displayName: "Acesso", email, password: "frase longa de acesso" });
+      await confirmFromEmail(page, email);
+
+      for (const next of ["Começar", "Continuar", "Pular"]) {
+        await expectAccessible(page);
+        await page.getByRole("button", { name: next }).click();
+      }
+      await expect(page.getByText("Passo 4 de 4")).toBeVisible();
+      await expectAccessible(page);
+    });
+  });
+}

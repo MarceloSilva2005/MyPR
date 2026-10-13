@@ -2,6 +2,7 @@ import { expect, test as setup } from "@playwright/test";
 import pg from "pg";
 
 import {
+  completeOnboarding,
   confirmFromEmail,
   SIGNED_IN_STATE,
   sharedAccount,
@@ -32,7 +33,7 @@ setup("conta de teste com sessão", async ({ browser }) => {
   await page.goto("/sign-in");
   await signIn(page, email, password);
   const outcome = await Promise.race([
-    page.waitForURL(/\/app(\?|$)/).then(() => "signed-in" as const),
+    page.waitForURL(/\/app(\/onboarding)?$/).then(() => "signed-in" as const),
     page
       .getByText("E-mail ou senha incorretos.")
       .waitFor()
@@ -43,6 +44,9 @@ setup("conta de teste com sessão", async ({ browser }) => {
     await signUp(page, { displayName, email, password });
     await confirmFromEmail(page, email);
   }
+  // The application sends an account that has not finished onboarding there.
+  await page.goto("/app");
+  if (page.url().endsWith("/app/onboarding")) await completeOnboarding(page);
 
   await expect(
     page
