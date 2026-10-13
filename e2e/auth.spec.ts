@@ -141,16 +141,17 @@ test.describe("verificação de segurança", () => {
   test("o login pede a verificação depois de três falhas", async ({ page }) => {
     // Failures from this test's own address; other tests also miss the shared account.
     const guessed = uniqueEmail("tentativas");
-    const check = page.getByRole("group", { name: "Verificação de segurança" });
+    // The widget usually passes unseen; its token field shows that the check is on.
+    const check = page.locator('input[name="cf-turnstile-response"]');
     await page.goto("/sign-in");
     for (let attempt = 1; attempt <= 3; attempt++) {
-      await expect(check).toBeHidden();
+      await expect(check).toHaveCount(0);
       await signIn(page, guessed, `senha errada ${String(attempt)}`);
       await expect(
         page.getByRole("alert").filter({ hasText: "E-mail ou senha incorretos." }),
       ).toBeVisible();
     }
-    await expect(check).toBeVisible();
+    await expect(check).toBeAttached();
 
     await passHumanCheck(page);
     await signIn(page, sharedAccount.email, sharedAccount.password);
