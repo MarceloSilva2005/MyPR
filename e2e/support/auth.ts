@@ -65,10 +65,21 @@ export async function signUp(
   await expect(page).toHaveURL(/\/check-email$/);
 }
 
+/** Confirms a new account, which then continues to the onboarding. */
 export async function confirmFromEmail(page: Page, email: string): Promise<void> {
   await page.goto(await emailLink(page.request, email));
   await page.getByRole("button", { name: "Confirmar e-mail" }).click();
-  await expect(page).toHaveURL(/\/app(\?|$)/);
+  await expect(page).toHaveURL(/\/app\/onboarding$/);
+}
+
+/** Goes through the onboarding with the defaults and skips the optional step. */
+export async function completeOnboarding(page: Page): Promise<void> {
+  await page.goto("/app/onboarding");
+  await page.getByRole("button", { name: "Começar" }).click();
+  await page.getByRole("button", { name: "Continuar" }).click();
+  await page.getByRole("button", { name: "Pular" }).click();
+  await page.getByRole("button", { name: "Iniciar treino livre" }).click();
+  await expect(page).toHaveURL(/\/app\/workout$/);
 }
 
 export async function signIn(page: Page, email: string, password: string): Promise<void> {

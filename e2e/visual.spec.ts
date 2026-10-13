@@ -1,4 +1,5 @@
 import { expect, test } from "./fixtures";
+import { confirmFromEmail, signUp, uniqueAddress, uniqueEmail } from "./support/auth";
 
 // Baselines are rendered on Linux (CI), where fonts are reproducible. On other systems the
 // screenshots would differ by anti-aliasing alone, so these checks do not run there.
@@ -74,6 +75,29 @@ for (const scheme of SCHEMES) {
       await expect(page.getByText(/Informe um e-mail válido/)).toBeVisible();
       await page.evaluate(() => document.fonts.ready);
       await expect(page).toHaveScreenshot(`sign-up-errors-${scheme}.png`);
+    });
+  });
+}
+
+for (const scheme of SCHEMES) {
+  test.describe(`onboarding, tema ${scheme}`, () => {
+    test.use({ colorScheme: scheme, storageState: { cookies: [], origins: [] } });
+
+    test("preferências e perfil de treino", async ({ page, context, isMobile }, testInfo) => {
+      test.skip(
+        !isMobile && testInfo.project.name !== "desktop",
+        "Coberto no desktop e no celular.",
+      );
+      await context.setExtraHTTPHeaders({ "x-real-ip": uniqueAddress() });
+      const email = uniqueEmail("visual");
+      await signUp(page, { displayName: "Visual", email, password: "frase longa visual" });
+      await confirmFromEmail(page, email);
+      await page.getByRole("button", { name: "Começar" }).click();
+      await page.evaluate(() => document.fonts.ready);
+      await expect(page).toHaveScreenshot(`onboarding-preferences-${scheme}.png`);
+      await page.getByRole("button", { name: "Continuar" }).click();
+      await expect(page.getByText("Passo 3 de 4")).toBeVisible();
+      await expect(page).toHaveScreenshot(`onboarding-training-${scheme}.png`, { fullPage: true });
     });
   });
 }

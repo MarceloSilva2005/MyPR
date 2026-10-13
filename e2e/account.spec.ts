@@ -1,7 +1,14 @@
 import type { Browser, Page } from "@playwright/test";
 
 import { expect, test } from "./fixtures";
-import { confirmFromEmail, signIn, signUp, uniqueAddress, uniqueEmail } from "./support/auth";
+import {
+  completeOnboarding,
+  confirmFromEmail,
+  signIn,
+  signUp,
+  uniqueAddress,
+  uniqueEmail,
+} from "./support/auth";
 
 // Each journey uses its own account and two browser contexts, standing for
 // two devices signed in to the same account.
@@ -15,6 +22,7 @@ async function newAccount(page: Page, password: string): Promise<string> {
   const email = uniqueEmail("conta");
   await signUp(page, { displayName: "Conta", email, password });
   await confirmFromEmail(page, email);
+  await completeOnboarding(page);
   return email;
 }
 
