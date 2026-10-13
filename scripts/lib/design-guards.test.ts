@@ -66,7 +66,7 @@ describe("design guards: violations", () => {
   it("rejects oversized radii and pills outside status indicators", () => {
     expect(rules("src/ds/example.tsx", "rounded-3xl")).toContain("oversized radius");
     expect(rules("src/ds/example.tsx", "rounded-full")).toContain(
-      "pill shape outside status indicators",
+      "pill shape outside status and choice indicators",
     );
     expect(rules("src/ds/sync-status.tsx", "rounded-full")).toEqual([]);
   });

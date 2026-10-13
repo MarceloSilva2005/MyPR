@@ -76,9 +76,10 @@ const RULES: readonly Rule[] = [
     pattern: /\brounded(?:-[a-z]+)?-(?:2xl|3xl|4xl)\b/,
   },
   {
-    name: "pill shape outside status indicators",
+    name: "pill shape outside status and choice indicators",
     pattern: /\brounded(?:-[a-z]+)?-full\b/,
-    allowedIn: [/^src\/ds\/sync-status\.tsx$/],
+    // The sync dot and the radio mark are circles by convention.
+    allowedIn: [/^src\/ds\/sync-status\.tsx$/, /^src\/ds\/radio-group\.tsx$/],
   },
   {
     name: "motion outside the motion tokens",
