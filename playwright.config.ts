@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+import { SIGNED_IN_STATE } from "./e2e/support/auth";
+
 const PORT = 3100;
 
 export default defineConfig({
@@ -22,16 +24,33 @@ export default defineConfig({
   expect: {
     toHaveScreenshot: { animations: "disabled", maxDiffPixelRatio: 0.01 },
   },
+  // Every device project starts signed in with the shared test account; specs
+  // that need a visitor reset the storage state themselves.
   projects: [
+    { name: "setup", testMatch: /auth\.setup\.ts$/ },
     {
       name: "desktop",
-      use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } },
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1440, height: 900 },
+        storageState: SIGNED_IN_STATE,
+      },
     },
     {
       name: "tablet",
-      use: { ...devices["Desktop Chrome"], viewport: { width: 820, height: 1180 } },
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 820, height: 1180 },
+        storageState: SIGNED_IN_STATE,
+      },
     },
-    { name: "mobile", use: { ...devices["Pixel 7"] } },
+    {
+      name: "mobile",
+      dependencies: ["setup"],
+      use: { ...devices["Pixel 7"], storageState: SIGNED_IN_STATE },
+    },
   ],
   webServer: {
     command: `node node_modules/next/dist/bin/next start -p ${String(PORT)}`,

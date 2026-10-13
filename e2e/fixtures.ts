@@ -23,7 +23,11 @@ export const test = base.extend<{ tolerance: Tolerance }>({
         problems.push(`pageerror: ${error.message}`);
       });
       page.on("requestfailed", (request) => {
-        problems.push(`request failed: ${request.url()}`);
+        const reason = request.failure()?.errorText ?? "unknown";
+        // The router cancels requests it no longer needs, such as the rest of
+        // a form action response after following its redirect. Not a failure.
+        if (reason === "net::ERR_ABORTED") return;
+        problems.push(`request failed: ${request.method()} ${request.url()} (${reason})`);
       });
       page.on("response", (response) => {
         const status = response.status();

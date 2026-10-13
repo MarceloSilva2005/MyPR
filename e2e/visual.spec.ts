@@ -51,6 +51,33 @@ for (const scheme of SCHEMES) {
   });
 }
 
+for (const scheme of SCHEMES) {
+  test.describe(`telas de acesso, tema ${scheme}`, () => {
+    test.use({ colorScheme: scheme, storageState: { cookies: [], origins: [] } });
+    test.beforeEach(({ isMobile }, testInfo) => {
+      test.skip(
+        !isMobile && testInfo.project.name !== "desktop",
+        "Coberto no desktop e no celular.",
+      );
+    });
+
+    test("entrar", async ({ page }) => {
+      await page.goto("/sign-in");
+      await page.evaluate(() => document.fonts.ready);
+      await expect(page).toHaveScreenshot(`sign-in-${scheme}.png`);
+    });
+
+    test("cadastro com erros de validação", async ({ page }) => {
+      await page.goto("/sign-up");
+      await page.getByLabel("E-mail").fill("nome@");
+      await page.getByRole("button", { name: "Criar conta" }).click();
+      await expect(page.getByText(/Informe um e-mail válido/)).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      await expect(page).toHaveScreenshot(`sign-up-errors-${scheme}.png`);
+    });
+  });
+}
+
 test("shell no celular com treino ativo", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile", "A barra reduzida só existe no celular.");
   await page.goto("/dev/shell?activeWorkout=1");
