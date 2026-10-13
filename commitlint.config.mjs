@@ -28,6 +28,7 @@ export default {
       "always",
       [
         "auth",
+        "onboarding",
         "db",
         "ds",
         "shell",
