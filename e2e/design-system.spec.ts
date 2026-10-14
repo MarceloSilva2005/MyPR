@@ -32,6 +32,13 @@ test.describe("campos", () => {
     await page.goto("/dev/system");
     const combo = page.locator("#training").getByRole("combobox", { name: "Exercício" });
 
+    // Wait until the field responds (the list opens) so no keystroke is lost
+    // before the page becomes interactive.
+    await combo.click();
+    await combo.press("ArrowDown");
+    await expect(page.getByRole("listbox")).toBeVisible();
+    await combo.press("Escape");
+
     // Typed like a person would: the field reacts to real key events.
     await combo.pressSequentially("elevacao");
     await expect(page.getByRole("option")).toHaveCount(1);
