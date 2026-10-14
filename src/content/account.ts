@@ -11,7 +11,7 @@ export const accountContent = {
   },
   sessions: {
     label: "Sessões",
-    hint: "Saia dos outros navegadores e aparelhos em que você entrou.",
+    hint: "Desconecte sua conta dos outros navegadores e aparelhos.",
     action: "Encerrar outras sessões",
     title: "Encerrar outras sessões",
     description: "Esta sessão continua ativa. Confirme sua senha para continuar.",

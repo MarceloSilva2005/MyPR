@@ -36,12 +36,12 @@ function Row({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
-      <div className="min-w-0">
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+      <div className="min-w-0 sm:flex-1">
         <p className="text-sm font-medium text-fg">{label}</p>
         {hint ? <p className="text-sm text-fg-muted">{hint}</p> : null}
       </div>
-      {children}
+      <div className="shrink-0">{children}</div>
     </div>
   );
 }
