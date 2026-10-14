@@ -36,7 +36,7 @@ export default async function OnboardingPage() {
       </header>
       {step === 1 ? <WelcomeStep /> : null}
       {step === 2 || step === 3 ? <InteractiveStep step={step} profile={profile} /> : null}
-      {step === 5 ? <DoneStep /> : null}
+      {step === 5 ? <DoneStep profile={profile} /> : null}
     </div>
   );
 }

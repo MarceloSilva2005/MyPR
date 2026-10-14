@@ -53,13 +53,18 @@ test.describe("onboarding", () => {
     await page.getByRole("button", { name: "Continuar" }).click();
 
     await expect(progress(page)).toHaveText("Passo 3 de 4");
-    await page.getByText("Força", { exact: true }).click();
-    await page.getByText("Iniciante", { exact: true }).click();
-    await expect(page.getByRole("radio", { name: "Força" })).toBeChecked();
-    await expect(page.getByRole("radio", { name: "Iniciante" })).toBeChecked();
+    await page.getByText("Ficar mais forte", { exact: true }).click();
+    await page.getByText("Menos de 1 ano", { exact: true }).click();
+    await expect(page.getByRole("radio", { name: "Ficar mais forte" })).toBeChecked();
+    await expect(page.getByRole("radio", { name: "Menos de 1 ano" })).toBeChecked();
     await page.getByRole("button", { name: "Continuar" }).click();
 
     await expect(progress(page)).toHaveText("Passo 4 de 4");
+    // The last step shows what the answers set.
+    const summary = page.getByRole("region", { name: "Sua configuração" });
+    await expect(summary).toContainText("Libras (lb)");
+    await expect(summary).toContainText("Domingo");
+    await expect(summary).toContainText(/Descanso padrão\s*3\smin/);
     await page.getByRole("button", { name: "Montar rotina" }).click();
     await expect(page).toHaveURL(/\/app\/routines$/);
 
