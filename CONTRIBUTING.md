@@ -68,3 +68,10 @@ Antes de fechar uma etapa com interface, também é obrigatória a revisão visu
 ## Releases
 
 As tags seguem [SemVer](https://semver.org/lang/pt-BR/): `v0.N.0` por etapa, `v1.0.0-beta.N`, `v1.0.0-rc.N` e `v1.0.0`. A release é criada pelo workflow de release, e somente depois de todos os checks passarem. As notas ficam em `docs/releases/<tag>.md`.
+
+Antes da tag, no mesmo PR da etapa:
+
+- `CHANGELOG.md`, `docs/releases/<tag>.md` e a versão do `package.json` atualizados.
+- Tabela de etapas do `README.md` com a etapa marcada como concluída.
+- Campo "Estado" e ajustes da etapa registrados em `docs/execution-plan.md`.
+- Imagens de referência visual geradas no Linux, revisadas e versionadas.
