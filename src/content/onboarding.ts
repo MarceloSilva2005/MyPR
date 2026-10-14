@@ -1,4 +1,10 @@
-// Copy of the onboarding (section 5.2): short, factual, no motivational lines.
+// Copy of the onboarding (section 5.2). Short, direct questions; options in the
+// person's own words (outcomes, time spent training) rather than internal
+// labels; the last step shows what the answers set, so nothing is silent.
+
+// Keeps a number and its unit on the same line.
+const NBSP = " ";
+
 export const onboardingContent = {
   pageTitle: "Configuração inicial",
   progress: (current: number, total: number) => `Passo ${String(current)} de ${String(total)}`,
@@ -7,51 +13,55 @@ export const onboardingContent = {
   welcome: {
     title: "Boas-vindas ao MyPR",
     body: [
-      "O MyPR registra seus treinos de musculação série a série e mostra a evolução de cargas, volume e recordes.",
-      "Antes de começar, ajuste algumas preferências. Leva menos de um minuto.",
+      "Registre cada série, acompanhe a evolução das cargas e veja seus recordes.",
+      "Antes de começar, ajuste o básico. Leva menos de um minuto.",
     ],
     start: "Começar",
   },
   preferences: {
     title: "Preferências",
-    description: "Dá para mudar tudo isso depois, em Configurações.",
-    weightUnit: "Unidade de carga",
+    description: "Você pode alterar depois em Configurações.",
+    weightUnit: "Unidade de peso",
     weightUnits: { kg: "Quilogramas (kg)", lb: "Libras (lb)" },
     theme: "Tema",
     themes: { system: "Sistema", light: "Claro", dark: "Escuro" },
-    weekStartsOn: "A semana começa no",
+    weekStartsOn: "Início da semana",
     weekDays: { "1": "Segunda-feira", "0": "Domingo" },
   },
   trainingProfile: {
-    title: "Perfil de treino",
-    description:
-      "Com essas respostas, o MyPR já começa com o descanso entre séries ajustado ao seu objetivo. As duas são opcionais.",
-    goal: "Objetivo predominante",
+    title: "Seu treino",
+    description: "Define seus valores iniciais, como o descanso entre séries.",
+    goal: "Qual é o seu objetivo principal?",
     goals: {
-      hypertrophy: {
-        label: "Hipertrofia",
-        hint: "Ganhar massa muscular. Descanso de 2 min.",
-      },
-      strength: {
-        label: "Força",
-        hint: "Levantar mais carga. Descanso de 3 min.",
-      },
-      general_fitness: {
-        label: "Condicionamento geral",
-        hint: "Saúde e constância. Descanso de 1 min 30 s.",
-      },
+      hypertrophy: { label: "Ganhar massa muscular" },
+      strength: { label: "Ficar mais forte" },
+      general_fitness: { label: "Saúde e condicionamento" },
     },
-    experience: "Experiência com musculação",
+    experience: "Há quanto tempo você treina com regularidade?",
     levels: {
-      beginner: { label: "Iniciante", hint: "Menos de 1 ano de treino regular." },
-      intermediate: { label: "Intermediário", hint: "De 1 a 3 anos de treino regular." },
-      advanced: { label: "Avançado", hint: "Mais de 3 anos de treino regular." },
+      beginner: { label: "Menos de 1 ano" },
+      intermediate: { label: "De 1 a 3 anos" },
+      advanced: { label: "Mais de 3 anos" },
     },
     skip: "Pular",
   },
   done: {
-    title: "Configuração concluída",
-    body: "Monte uma rotina com os treinos da semana ou registre agora um treino livre.",
+    title: "Tudo pronto",
+    body: "Comece um treino agora ou monte sua primeira rotina.",
+    summary: "Sua configuração",
+    unit: "Unidade de peso",
+    weekStart: "Início da semana",
+    rest: "Descanso padrão",
+    weekDays: { "1": "Segunda-feira", "0": "Domingo" } as Record<string, string>,
+    restValue: (seconds: number) => {
+      const minutes = Math.floor(seconds / 60);
+      const rest = seconds % 60;
+      if (minutes === 0) return `${String(rest)}${NBSP}s`;
+      return rest === 0
+        ? `${String(minutes)}${NBSP}min`
+        : `${String(minutes)}${NBSP}min ${String(rest)}${NBSP}s`;
+    },
+    editHint: "Você pode alterar tudo em Configurações.",
     buildRoutine: "Montar rotina",
     startWorkout: "Iniciar treino livre",
   },

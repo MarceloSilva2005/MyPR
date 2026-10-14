@@ -1,5 +1,6 @@
 import { completeOnboarding, goBack, skipTrainingProfile, startOnboarding } from "./actions";
 import { onboardingContent } from "@/content/onboarding";
+import type { Profile } from "@/data/profiles";
 import { Button } from "@/ds/button";
 
 const copy = onboardingContent;
@@ -51,10 +52,33 @@ export function WelcomeStep() {
   );
 }
 
-export function DoneStep() {
+/** Shows what the answers set, so no default is applied silently. */
+export function DoneStep({ profile }: { profile: Profile }) {
+  const done = copy.done;
+  const unit = profile.weight_unit === "lb" ? "lb" : "kg";
+  const rows = [
+    [done.unit, copy.preferences.weightUnits[unit]],
+    [done.weekStart, done.weekDays[String(profile.week_starts_on)] ?? ""],
+    [done.rest, done.restValue(profile.default_rest_seconds)],
+  ] as const;
+
   return (
     <div className="flex flex-col gap-6">
-      <p className="text-sm text-fg-muted">{copy.done.body}</p>
+      <p className="text-sm text-fg-muted">{done.body}</p>
+      <section aria-labelledby="onboarding-summary" className="flex flex-col gap-2">
+        <h2 id="onboarding-summary" className="text-sm font-medium text-fg">
+          {done.summary}
+        </h2>
+        <dl className="divide-y divide-line rounded-lg border border-line text-sm">
+          {rows.map(([label, value]) => (
+            <div key={label} className="flex items-center justify-between gap-4 px-3 py-2">
+              <dt className="text-fg-muted">{label}</dt>
+              <dd className="text-fg">{value}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="text-xs text-fg-muted">{done.editHint}</p>
+      </section>
       <div className="flex flex-col gap-2">
         <form action={completeOnboarding}>
           <input type="hidden" name="destination" value="/app/routines" />
